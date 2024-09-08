@@ -1,4 +1,3 @@
-
 import OpenAI from 'openai';
 import express from 'express';
 import bodyParser from 'body-parser';
@@ -8,22 +7,10 @@ import path from 'path';
 
 dotenv.config();
 
-
 const app = express();
 
-
-
-// we serve the html files first
-const staticApp = express();
-staticApp.use(express.static(path.join('/var/www/html')));
-const STATIC_PORT = 80;
-
-staticApp.listen(STATIC_PORT, () => {
-  console.log(`Static server is running on port ${STATIC_PORT}`);
-});
-
-// now we move to the api
-const PORT = process.env.PORT;
+// Now we move to the API
+const PORT = process.env.PORT || 3000;  
 const OPEN_API_KEY = process.env.OPEN_API_KEY;
 
 app.use(bodyParser.json());
@@ -37,6 +24,7 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 
+// Start the API server on port 3000
 app.listen(PORT, () => {
   console.log(`                                                                                 
     ,,          
@@ -49,17 +37,16 @@ MM     ,M 8M   MM    MM   \`Mb.YM.    ,    VVV   YM.    ,  MM       MM YM.    ,
 .JMMmmmmMMM \`Moo9^Yo..JMML. .JMM.\`Mbmmd'     W     \`Mbmmd'.JMML.   .JMML.\`Mbmmd'
 
 ====================================================================================
-                          SERVER IS RUNNING ON PORT ${PORT}                  
+                          API Server is running on port ${PORT}                  
 ====================================================================================
                 `);
-  
 });
 
 const openai = new OpenAI({
   apiKey: OPEN_API_KEY,
 });
 
-app.post('/generate-concept', async (req, res) => {
+app.post('/api/generate-concept', async (req, res) => {
   console.log('Generating concept');
   try {
     console.log(req.body.prompt);
@@ -73,11 +60,11 @@ app.post('/generate-concept', async (req, res) => {
     res.send(response);
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
-    res.status(500).send("Error generating image");
+    res.status(500).send("Error generating concept");
   }
 });
 
-app.post('/generate-image', async (req, res) => {
+app.post('/api/generate-image', async (req, res) => {
   console.log('Generating image');
   try {
     console.log(req.body.prompt);
@@ -93,7 +80,7 @@ app.post('/generate-image', async (req, res) => {
     console.log(response);
     res.send(response);
   } catch (error) {
-    console.error("Error calling OpenAI API:", error);
+    console.error("Error generating image", error);
     res.status(500).send("Error generating image");
   }
 });
