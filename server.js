@@ -42,9 +42,9 @@ MM     ,M 8M   MM    MM   \`Mb.YM.    ,    VVV   YM.    ,  MM       MM YM.    ,
                 `);
 });
 
-const openai = new OpenAI({
-  apiKey: OPEN_API_KEY,
-});
+// const openai = new OpenAI({
+//   apiKey: OPEN_API_KEY,
+// });
 
 app.post('/api/generate-concept', async (req, res) => {
   console.log('Generating concept');
