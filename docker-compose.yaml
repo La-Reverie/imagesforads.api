@@ -1,4 +1,3 @@
-version: '3'
 services:
   imagesforadsdb:
     image: mongodb/mongodb-community-server:6.0-ubi8
@@ -16,6 +15,12 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
     expose:
       - 27017
+    ports:
+      - 27017:27017
+    external_links:
+      - mongo
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./docker-entrypoint-initdb.d/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
       - type: bind

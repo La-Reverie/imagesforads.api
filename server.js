@@ -4,14 +4,16 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import jwt from 'jsonwebtoken'
+import { MongoClient } from 'mongodb';
 
 dotenv.config();
 
 const app = express();
 
 // Now we move to the API
-const PORT = process.env.PORT || 3000;  
-const OPEN_API_KEY = process.env.OPEN_API_KEY;
+const PORT = process.env.PORT || 3001;  
+// const OPEN_API_KEY = process.env.OPEN_API_KEY;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -23,6 +25,22 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
+
+//Mongo
+let mongoDb;
+
+const uri = `mongodb://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@127.0.0.1:27017`;
+MongoClient.connect(uri, function(err, database) {
+  if(err){
+    console.log("ERROR: ", err)
+  }
+
+  mongoDb = database.db("imagesforadsapi-mongodb-1");
+
+  // Start the application after the database connection is ready
+  app.listen(27017);
+  console.log("database connected! Listening on port 27017");
+});
 
 // Start the API server on port 3000
 app.listen(PORT, () => {
@@ -42,9 +60,9 @@ MM     ,M 8M   MM    MM   \`Mb.YM.    ,    VVV   YM.    ,  MM       MM YM.    ,
                 `);
 });
 
-const openai = new OpenAI({
-  apiKey: OPEN_API_KEY,
-});
+// const openai = new OpenAI({
+//   apiKey: OPEN_API_KEY,
+// });
 
 app.post('/api/generate-concept', async (req, res) => {
   console.log('Generating concept');
@@ -84,3 +102,31 @@ app.post('/api/generate-image', async (req, res) => {
     res.status(500).send("Error generating image");
   }
 });
+
+app.post('/api/authenticate', async (req, res) => {
+  try{
+      const { credential } = req?.body;
+      
+      console.log(">>> decoded SSO credential from client", jwt.decode(credential));
+
+      const decodedGoogleObj = jwt.decode(credential);
+
+      if(decodedGoogleObj){
+        // check if a user already exists in the db
+        // if not, add a new record
+        // if yes, use info from the existing record
+        // build an authentication object and send to client with a JWT
+      }
+      else{
+        res.send({authenticated: false, errorText: "Invalid Credentials"})
+      }
+
+      //temp response
+      const authRes = { authenticated:true };
+      res.json(authRes);
+
+  }
+  catch(error){
+    console.log("ERROR: ", error)
+  }
+})
