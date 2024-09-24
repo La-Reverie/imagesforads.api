@@ -1,5 +1,6 @@
-import OpenAI from 'openai';
 import express from 'express';
+import expressSessopm from 'express-session';
+import OpenAI from 'openai';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -45,6 +46,18 @@ MM     ,M 8M   MM    MM   \`Mb.YM.    ,    VVV   YM.    ,  MM       MM YM.    ,
 ====================================================================================
                 `);
 });
+
+
+
+
+app.get('/api/session', async (req, res) => {
+  console.log('Generating concept');
+  
+    res.send('DON2222E');
+  
+});
+
+
 
 const openai = new OpenAI({
   apiKey: OPEN_API_KEY,
