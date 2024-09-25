@@ -106,31 +106,22 @@ app.post('/api/authenticate', async (req, res) => {
       const decodedGoogleObj = jwt.decode(credential);
 
       if(decodedGoogleObj && decodedGoogleObj.email_verified){
-
           const { name, picture, email } = decodedGoogleObj;
           const existingUser = await mongoDb.collection("users").findOne({email: email});
-          const token = jwt.sign({
-            exp: Math.floor(Date.now() / 1000) + (60 * 60), // token good for 1 hour
-          }, 'authenticated')
 
           if(!existingUser){
-            await mongoDb.collection("users").insertOne({name, email, picture})
-            res.json({
-              token: token, 
-              authenticated: true,
-              imageUrl: picture
-            });
+              await mongoDb.collection("users").insertOne({name, email, picture});
           }
-          else{
-            res.json({
-              token: token, 
-              authenticated: true,
-              imageUrl: picture
-            });
-          }
+          res.json({
+            token: jwt.sign({
+              exp: Math.floor(Date.now() / 1000) + (60 * 60), // token good for 1 hour
+            }, 'authenticated'), 
+            authenticated: true,
+            imageUrl: picture
+          });
       }
       else{
-        res.send({authenticated: false, errorText: "Invalid Credentials"})
+          res.send({authenticated: false, errorText: "Invalid Credentials"})
       }
   }
   catch(error){
