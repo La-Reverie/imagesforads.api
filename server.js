@@ -13,7 +13,7 @@ const app = express();
 
 // Now we move to the API
 const PORT = process.env.PORT || 3001;  
-// const OPEN_API_KEY = process.env.OPEN_API_KEY;
+const OPEN_API_KEY = process.env.OPEN_API_KEY;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -28,19 +28,16 @@ app.use(bodyParser.urlencoded({
 
 //Mongo
 let mongoDb;
+const mongoUrl = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@imagesforads.sqyde.mongodb.net/?retryWrites=true&w=majority&appName=imagesforads`;
 
-const uri = `mongodb://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@127.0.0.1:27017`;
-MongoClient.connect(uri, function(err, database) {
-  if(err){
-    console.log("ERROR: ", err)
-  }
-
-  mongoDb = database.db("imagesforadsapi-mongodb-1");
-
-  // Start the application after the database connection is ready
-  app.listen(27017);
-  console.log("database connected! Listening on port 27017");
-});
+MongoClient.connect(mongoUrl)
+  .then((db) => {
+    console.log('Database connected successfully!')
+    mongoDb = db.db('imagesforads');
+  })
+  .catch((err) => {
+    console.log('Error:', err)
+  })
 
 // Start the API server on port 3000
 app.listen(PORT, () => {
@@ -60,9 +57,9 @@ MM     ,M 8M   MM    MM   \`Mb.YM.    ,    VVV   YM.    ,  MM       MM YM.    ,
                 `);
 });
 
-// const openai = new OpenAI({
-//   apiKey: OPEN_API_KEY,
-// });
+const openai = new OpenAI({
+  apiKey: OPEN_API_KEY,
+});
 
 app.post('/api/generate-concept', async (req, res) => {
   console.log('Generating concept');
@@ -106,25 +103,35 @@ app.post('/api/generate-image', async (req, res) => {
 app.post('/api/authenticate', async (req, res) => {
   try{
       const { credential } = req?.body;
-      
-      console.log(">>> decoded SSO credential from client", jwt.decode(credential));
-
       const decodedGoogleObj = jwt.decode(credential);
 
-      if(decodedGoogleObj){
-        // check if a user already exists in the db
-        // if not, add a new record
-        // if yes, use info from the existing record
-        // build an authentication object and send to client with a JWT
+      if(decodedGoogleObj && decodedGoogleObj.email_verified){
+
+          const { name, picture, email } = decodedGoogleObj;
+          const existingUser = await mongoDb.collection("users").findOne({email: email});
+          const token = jwt.sign({
+            exp: Math.floor(Date.now() / 1000) + (60 * 60), // token good for 1 hour
+          }, 'authenticated')
+
+          if(!existingUser){
+            await mongoDb.collection("users").insertOne({name, email, picture})
+            res.json({
+              token: token, 
+              authenticated: true,
+              imageUrl: picture
+            });
+          }
+          else{
+            res.json({
+              token: token, 
+              authenticated: true,
+              imageUrl: picture
+            });
+          }
       }
       else{
         res.send({authenticated: false, errorText: "Invalid Credentials"})
       }
-
-      //temp response
-      const authRes = { authenticated:true };
-      res.json(authRes);
-
   }
   catch(error){
     console.log("ERROR: ", error)

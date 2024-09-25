@@ -22,19 +22,6 @@ And when you run the frontend and submit the form, an API call will be made to t
 
 # MongoDB
 
-This repo uses a MongoDB Community database that is self-hosted. To initialize a local instance of of Mongo DB:
+This repo uses a MongoDB Atlas:
 
-- Install Docker Desktop https://www.docker.com/products/docker-desktop/
-
-- Create a folder structure outside of your local path to this repo <code>"../data/db"</code>. This is where the database volumes will live. In production, this is the origin from which the data will be backed up by Hostinger. The docker-compose.yaml file will need this path in order to mount the volumes. 
-
-- Add a .env file to the root path of this repo with your MONGODB_USERNAME and 
-MONGODB_PASSWORD values. These will be used to access your local MongoDB instance. 
-
-- before running the server, run <code>docker-compose up</code> from the local directory of imagesforads.api. This will build your container locally and you should see it built and running in Docker Desktop.
-
--  To access the local mongo server, first run <code>docker exec -t -i imagesforadsapi-mongodb-1 /bin/bash</code>
-
-- Once you're in the local Docker container, run <code>mongosh</code> , then <code>use admin</code>, then db.auth(username, password)
-
-- These commands will authenticate you so you'll be able to access the collections. 
+- Add your MONGODB_USERNAME and MONGODB_PASSWORD to your .env file.
