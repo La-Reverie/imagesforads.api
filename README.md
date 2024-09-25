@@ -25,3 +25,19 @@ And when you run the frontend and submit the form, an API call will be made to t
 This repo uses a MongoDB Atlas:
 
 - Add your MONGODB_USERNAME and MONGODB_PASSWORD to your .env file.
+
+To connect to the Atlas cluster via SSH: 
+
+- install mongosh `brew install mongosh`
+
+- run `mongosh "mongodb+srv://imagesforads.sqyde.mongodb.net/" --apiVersion 1 --username <your_db_username>`
+
+- You will be prompted for the password for the Database User, <db_username>
+
+Once you're in the cluster you can run some common commands like: 
+
+Show all databases: `show dbs`
+
+Use a specific database: `use imagesforads`
+
+Find a record in the users table: `db.collection("users").findOne({name: 'Jon'})`
