@@ -40,4 +40,4 @@ Show all databases: `show dbs`
 
 Use a specific database: `use imagesforads`
 
-Find a record in the users table: `db.collection("users").findOne({name: 'Jon'})`
+Find a record in the users table: `db.getCollection("users").findOne({name: 'Jon'})`
