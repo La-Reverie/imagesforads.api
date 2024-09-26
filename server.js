@@ -178,3 +178,8 @@ app.storeFileByUrl = async function (imageUrl) {
     throw new Error(error);
   }
 };
+
+// Creating the /test route
+app.get('/api/test', (req, res) => {
+  res.send('API IS WORKING');
+});
