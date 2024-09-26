@@ -1,0 +1,46 @@
+name: LaReverieVPS
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed  # Ejecutar solo cuando se cierra un pull request (después del merge) #THIS IS JUST TO FIRE THE WORKFLOW
+
+jobs:
+  test-pm2:
+    if: github.event.pull_request.merged == true  # Asegurarse de que el pull request fue fusionado
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Copy repository to VPS
+        uses: appleboy/scp-action@v0.1.1
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: './*'  # Copiar todo el contenido del repositorio
+          target: '/var/www/api/'  # Directorio destino en el VPS
+
+      - name: Test pm2 command on VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # Cargar nvm
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # Cargar bash_completion de nvm
+            nvm use 22.8.0  # Asegurarse de usar la versión correcta de Node.js
+            cd /var/www/api  # Cambiar al directorio correcto
+            ls -la  # Verificar que los archivos están ahí
+            node --version  # Verificar que Node.js está disponible
+            /home/deployuser/.nvm/versions/node/v22.8.0/bin/pm2 --version  # Verificar la versión de PM2
+            /home/deployuser/.nvm/versions/node/v22.8.0/bin/pm2 start ecosystem.config.cjs  # Iniciar la app con PM2
