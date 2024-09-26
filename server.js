@@ -108,10 +108,12 @@ app.post('/api/authenticate', async (req, res) => {
       if(decodedGoogleObj && decodedGoogleObj.email_verified){
           const { name, picture, email } = decodedGoogleObj;
           const existingUser = await mongoDb.collection("users").findOne({email: email});
+          const timeStamp = Date.now();
 
           if(!existingUser){
-              await mongoDb.collection("users").insertOne({name, email, picture});
+              await mongoDb.collection("users").insertOne({name, email, picture, timeStamp});
           }
+
           res.json({
             token: jwt.sign({
               exp: Math.floor(Date.now() / 1000) + (60 * 60), // token good for 1 hour
