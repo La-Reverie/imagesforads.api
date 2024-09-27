@@ -1,5 +1,4 @@
 import express from 'express';
-import expressSession from 'express-session';
 import OpenAI from 'openai';
 import 'dotenv/config'
 import bodyParser from 'body-parser';
@@ -25,12 +24,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
-
 app.use(cors());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({
-  extended: true
-}));
 
 //Mongo
 let mongoDb;
@@ -63,24 +58,13 @@ MM     ,M 8M   MM    MM   \`Mb.YM.    ,    VVV   YM.    ,  MM       MM YM.    ,
                 `);
 });
 
-
-
-
-app.get('/api/session', async (req, res) => {
-  console.log('Generating concept');
-  
-    res.send('DON2222E');
-  
-});
-
-
-
 const openai = new OpenAI({
   apiKey: OPEN_API_KEY,
 });
 
 app.post('/api/generate-concept', async (req, res) => {
   console.log('Generating concept');
+  console.log(req.body.currentUser);
   try {
     console.log(req.body.prompt);
     const response = await openai.chat.completions.create({
@@ -112,7 +96,7 @@ app.post('/api/generate-image', async (req, res) => {
 
     console.log(response);
     // await app.downloadImage(response.data[0].url, path.join(SAVE_FILE_PATH, response.created + '.png'));
-    await app.storeFileByUrl(response.data[0].url);
+    await app.storeFileByUrl(response.data[0].url, req);
     res.send(response);
   } catch (error) {
     console.error("Error generating image", error);
@@ -121,32 +105,60 @@ app.post('/api/generate-image', async (req, res) => {
 });
 
 app.post('/api/authenticate', async (req, res) => {
-  try{
+  try {
       const { credential } = req?.body;
       const decodedGoogleObj = jwt.decode(credential);
 
-      if(decodedGoogleObj && decodedGoogleObj.email_verified){
+      if (decodedGoogleObj && decodedGoogleObj.email_verified) {
           const { name, picture, email } = decodedGoogleObj;
-          const existingUser = await mongoDb.collection("users").findOne({email: email});
-          const timeStamp = Date.now();
+          const timeStampNow = Date.now();
 
-          if(!existingUser){
-              await mongoDb.collection("users").insertOne({name, email, picture, timeStamp});
+          // Check if user exists in the database
+          const existingUser = await mongoDb.collection('users').findOne({email: email});
+          let currentUser;
+
+          // if the user exists, update the lastModifiedAt field
+          if (!!existingUser) {
+              currentUser = {
+                ...existingUser,
+                lastModifiedAt: timeStampNow,
+              };
+              // update the lastModifiedAt field in the database
+              const user = await mongoDb.collection('users').updateOne({email: email}, {$set: {lastModifiedAt: timeStampNow}});
+              console.log("User updated: ", user);
+          // if the user does not exist, create a new user
+          } else {
+              // currentUser object to be saved to the DB
+              currentUser = {
+                name,
+                picture,
+                email,
+                createdAt: timeStampNow,
+                lastModifiedAt: timeStampNow,
+              };
+              const user = await mongoDb.collection("users").insertOne(currentUser);
+              // add the newly created user's _id to the currentUser object
+              currentUser._id = user.insertedId;
+              console.log("User created: ", user);
           }
 
+          const token = jwt.sign(
+            { exp: Math.floor(Date.now() / 1000) + (60 * 60), }, // token good for 1 hour
+            'authenticated',
+          );
+
           res.json({
-            token: jwt.sign({
-              exp: Math.floor(Date.now() / 1000) + (60 * 60), // token good for 1 hour
-            }, 'authenticated'), 
+            token,
+            currentUser,
             authenticated: true,
             imageUrl: picture
           });
       }
-      else{
+      else {
           res.send({authenticated: false, errorText: "Invalid Credentials"})
       }
   }
-  catch(error){
+  catch (error) {
     console.log("ERROR: ", error)
   }
 })
@@ -169,7 +181,7 @@ app.downloadFile = async (url, filePath) => {
 };
 
 // top level file storage handler
-app.storeFileByUrl = async function (imageUrl) {
+app.storeFileByUrl = async function (imageUrl, req) {
   if (!imageUrl) {
     console.log('Image URL is required');
     return false;
@@ -198,4 +210,3 @@ app.get('/api/test', (req, res) => {
   console.log('TEST ROUTE SUCCESSFUL');
   res.send('API IS WORKING');
 });
-
