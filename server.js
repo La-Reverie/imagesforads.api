@@ -16,7 +16,7 @@ const SAVE_FILE_PATH = 'generated-images';
 const app = express();
 
 // Now we move to the API
-const PORT = process.env.PORT || 3001;  
+const PORT = process.env.PORT || 3001;
 const OPEN_API_KEY = process.env.OPEN_API_KEY;
 
 app.use(bodyParser.json());
@@ -181,5 +181,7 @@ app.storeFileByUrl = async function (imageUrl) {
 
 // Creating the /test route
 app.get('/api/test', (req, res) => {
+  console.log('TEST ROUTE SUCCESSFUL');
   res.send('API IS WORKING');
 });
+
