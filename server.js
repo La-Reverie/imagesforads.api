@@ -1,12 +1,15 @@
 import express from 'express';
-import expressSessopm from 'express-session';
+import expressSession from 'express-session';
 import OpenAI from 'openai';
+import 'dotenv/config'
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import jwt from 'jsonwebtoken'
+import { MongoClient } from 'mongodb';
 import { fileURLToPath } from 'url';
 
 dotenv.config();
@@ -15,7 +18,7 @@ const SAVE_FILE_PATH = 'generated-images';
 const app = express();
 
 // Now we move to the API
-const PORT = process.env.PORT || 3000;  
+const PORT = process.env.PORT || 3001;
 const OPEN_API_KEY = process.env.OPEN_API_KEY;
 
 app.use(bodyParser.json());
@@ -28,6 +31,19 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
+
+//Mongo
+let mongoDb;
+const mongoUrl = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@imagesforads.sqyde.mongodb.net/?retryWrites=true&w=majority&appName=imagesforads`;
+
+MongoClient.connect(mongoUrl)
+  .then((db) => {
+    console.log('Database connected successfully!')
+    mongoDb = db.db('imagesforads');
+  })
+  .catch((err) => {
+    console.log('Error:', err)
+  })
 
 // Start the API server on port 3000
 app.listen(PORT, () => {
@@ -104,6 +120,37 @@ app.post('/api/generate-image', async (req, res) => {
   }
 });
 
+app.post('/api/authenticate', async (req, res) => {
+  try{
+      const { credential } = req?.body;
+      const decodedGoogleObj = jwt.decode(credential);
+
+      if(decodedGoogleObj && decodedGoogleObj.email_verified){
+          const { name, picture, email } = decodedGoogleObj;
+          const existingUser = await mongoDb.collection("users").findOne({email: email});
+          const timeStamp = Date.now();
+
+          if(!existingUser){
+              await mongoDb.collection("users").insertOne({name, email, picture, timeStamp});
+          }
+
+          res.json({
+            token: jwt.sign({
+              exp: Math.floor(Date.now() / 1000) + (60 * 60), // token good for 1 hour
+            }, 'authenticated'), 
+            authenticated: true,
+            imageUrl: picture
+          });
+      }
+      else{
+          res.send({authenticated: false, errorText: "Invalid Credentials"})
+      }
+  }
+  catch(error){
+    console.log("ERROR: ", error)
+  }
+})
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -145,4 +192,10 @@ app.storeFileByUrl = async function (imageUrl) {
     throw new Error(error);
   }
 };
+
+// Creating the /test route
+app.get('/api/test', (req, res) => {
+  console.log('TEST ROUTE SUCCESSFUL');
+  res.send('API IS WORKING');
+});
 
