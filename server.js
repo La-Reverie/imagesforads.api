@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import express from 'express';
+import 'dotenv/config'
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
