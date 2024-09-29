@@ -1,4 +1,4 @@
 .env
 node_modules
-generated-images
+/generated-images
 **/.DS_Store

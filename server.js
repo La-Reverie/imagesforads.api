@@ -10,6 +10,8 @@ import path from 'path';
 import jwt from 'jsonwebtoken'
 import { MongoClient } from 'mongodb';
 import { fileURLToPath } from 'url';
+import { fileTypeFromBuffer } from 'file-type';
+import { readChunk } from 'read-chunk';
 
 dotenv.config();
 
@@ -73,6 +75,7 @@ const generateTextPrompt = (userInput) => {
 
 app.post('/api/generate', async (req, res) => {
   console.log('Generate');
+
   try {
     const textPrompt = generateTextPrompt(req.body.userInput);
     console.log('generating concept');
@@ -98,48 +101,6 @@ app.post('/api/generate', async (req, res) => {
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
     res.status(500).send("Error generating concept");
-  }
-});
-
-app.post('/api/generate-concept', async (req, res) => {
-  console.log('Generating concept');
-  console.log(req.body.currentUser);
-  try {
-    console.log(req.body.prompt);
-    const response = await openai.chat.completions.create({
-      messages: [{ role: "user", content: req.body.prompt }],
-      model: "gpt-3.5-turbo",
-      // model: "gpt-4-1106-preview",
-    });
-
-    console.log(response);
-    res.send(response);
-  } catch (error) {
-    console.error("Error calling OpenAI API:", error);
-    res.status(500).send("Error generating concept");
-  }
-});
-
-app.post('/api/generate-image', async (req, res) => {
-  console.log('Generating image');
-  try {
-    console.log(req.body.prompt);
-    const response = await openai.images.generate({
-      prompt: req.body.prompt,
-      model: 'dall-e-3',
-      quality: 'hd',
-      size: '1024x1024',
-      style: 'vivid',
-      n: 1,
-    });
-
-    console.log(response);
-    // await app.downloadImage(response.data[0].url, path.join(SAVE_FILE_PATH, response.created + '.png'));
-    await app.storeFileByUrl(response.data[0].url, req);
-    res.send(response);
-  } catch (error) {
-    console.error("Error generating image", error);
-    res.status(500).send("Error generating image");
   }
 });
 
@@ -206,6 +167,11 @@ app.post('/api/authenticate', async (req, res) => {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function getFileName(currentUserObj) {
+  // user ID + current time + random number
+  return `${currentUserObj._id}_${Date.now()}_${Math.floor(Math.random() * 99999999)}`;
+}
+
 // Called by storeFileByUrl to handle the actual saving of the file
 app.downloadFile = async (url, filePath) => {
   const response = await axios({
@@ -213,10 +179,22 @@ app.downloadFile = async (url, filePath) => {
     responseType: 'stream',
   });
 
+  // write file to disk
   return new Promise((resolve, reject) => {
     response.data.pipe(fs.createWriteStream(filePath))
-      .on('finish', () => resolve())
+      .on('finish', () => resolve(filePath))
       .on('error', (e) => reject(e));
+  }).then(async filePath => {
+    // read the first 4100 bytes of the file to determine the file type
+    const buffer = await readChunk(filePath, {length: 4100});
+    const fileMetadata = await fileTypeFromBuffer(buffer);
+
+    // rename the file on disk to include the file extension
+    fs.rename(filePath, `${filePath}.${fileMetadata.ext}`, (err) => {
+      if (err) {
+        console.log('Error renaming file:', err);
+      }
+    });
   });
 };
 
@@ -227,9 +205,9 @@ app.storeFileByUrl = async function (imageUrl, req) {
     return false;
   }
 
-  const fileName = path.basename(imageUrl);
-  const filePath = path.join(__dirname, SAVE_FILE_PATH, fileName + '.jpg');
-
+  const currentUserObj = JSON.parse(req.body.currentUser);
+  const fileName = getFileName(currentUserObj);
+  const filePath = path.join(__dirname, SAVE_FILE_PATH, fileName);
   try {
     // Ensure the downloads directory exists
     if (!fs.existsSync(path.join(__dirname, SAVE_FILE_PATH))) {
