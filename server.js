@@ -98,7 +98,7 @@ app.post('/api/generate', async (req, res) => {
     
     const imageInfo = await app.storeFileByUrl(imageResponse.data[0].url, req);
     app.saveSubmission({
-      ...req.body.userInput,
+      userInput: req.body.userInput,
       owner: imageInfo._id,
       absoluteFilePath: imageInfo.absoluteFilePath,
       conceptPrompt,
