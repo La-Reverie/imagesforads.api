@@ -194,7 +194,7 @@ app.downloadFile = async (url, filePath, fileName, currentUserObj) => {
     response.data.pipe(fs.createWriteStream(absoluteFilePath))
       .on('finish', () => resolve(absoluteFilePath, currentUserObj))
       .on('error', (e) => reject(e));
-  }).then(async (absoluteFilePath, user1) => {
+  }).then(async (absoluteFilePath) => {
     // read the first 4100 bytes of the file to determine the file type
     const buffer = await readChunk(absoluteFilePath, {length: 4100});
     const fileMetadata = await fileTypeFromBuffer(buffer);
