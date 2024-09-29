@@ -101,48 +101,6 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
-app.post('/api/generate-concept', async (req, res) => {
-  console.log('Generating concept');
-  console.log(req.body.currentUser);
-  try {
-    console.log(req.body.prompt);
-    const response = await openai.chat.completions.create({
-      messages: [{ role: "user", content: req.body.prompt }],
-      model: "gpt-3.5-turbo",
-      // model: "gpt-4-1106-preview",
-    });
-
-    console.log(response);
-    res.send(response);
-  } catch (error) {
-    console.error("Error calling OpenAI API:", error);
-    res.status(500).send("Error generating concept");
-  }
-});
-
-app.post('/api/generate-image', async (req, res) => {
-  console.log('Generating image');
-  try {
-    console.log(req.body.prompt);
-    const response = await openai.images.generate({
-      prompt: req.body.prompt,
-      model: 'dall-e-3',
-      quality: 'hd',
-      size: '1024x1024',
-      style: 'vivid',
-      n: 1,
-    });
-
-    console.log(response);
-    // await app.downloadImage(response.data[0].url, path.join(SAVE_FILE_PATH, response.created + '.png'));
-    await app.storeFileByUrl(response.data[0].url, req);
-    res.send(response);
-  } catch (error) {
-    console.error("Error generating image", error);
-    res.status(500).send("Error generating image");
-  }
-});
-
 app.post('/api/authenticate', async (req, res) => {
   try {
       const { credential } = req?.body;
