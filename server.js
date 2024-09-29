@@ -75,8 +75,7 @@ const generateTextPrompt = (userInput) => {
 
 app.post('/api/generate', async (req, res) => {
   console.log('Generate');
-<<<<<<< HEAD
-=======
+
   try {
     const textPrompt = generateTextPrompt(req.body.userInput);
     console.log('generating concept');
@@ -108,7 +107,7 @@ app.post('/api/generate', async (req, res) => {
 app.post('/api/generate-concept', async (req, res) => {
   console.log('Generating concept');
   console.log(req.body.currentUser);
->>>>>>> main
+
   try {
     const textPrompt = generateTextPrompt(req.body.userInput);
     console.log('generating concept');
