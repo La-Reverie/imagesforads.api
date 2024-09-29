@@ -62,6 +62,45 @@ const openai = new OpenAI({
   apiKey: OPEN_API_KEY,
 });
 
+const generateTextPrompt = (userInput) => {
+  return `I am creating an online ad campaign and I need images for the ads. The subject of my ads is: ${userInput.subject}
+          The URL for my subject is: ${userInput.url}
+          The objective for my campaign is: ${userInput.objective}
+          The copy for my ads is: ${userInput.ad_copy}
+          Please create a detailed description of the image we should use for this ad. The image should be as simple as possible,
+          containing just a few elements.`;
+};
+
+app.post('/api/generate', async (req, res) => {
+  console.log('Generate');
+  try {
+    const textPrompt = generateTextPrompt(req.body.userInput);
+    console.log('generating concept');
+    const conceptResponse = await openai.chat.completions.create({
+      messages: [{ role: "user", content: textPrompt }],
+      model: "gpt-3.5-turbo",
+      // model: "gpt-4-1106-preview",
+    });
+
+    const conceptPrompt = await conceptResponse.choices[0].message.content;
+    console.log('generating image');
+    const imageResponse = await openai.images.generate({
+      prompt: conceptPrompt,
+      model: 'dall-e-3',
+      quality: 'hd',
+      size: '1024x1024',
+      style: 'vivid',
+      n: 1,
+    });
+    
+    await app.storeFileByUrl(imageResponse.data[0].url, req);
+    res.send(imageResponse);
+  } catch (error) {
+    console.error("Error calling OpenAI API:", error);
+    res.status(500).send("Error generating concept");
+  }
+});
+
 app.post('/api/generate-concept', async (req, res) => {
   console.log('Generating concept');
   console.log(req.body.currentUser);
@@ -126,8 +165,9 @@ app.post('/api/authenticate', async (req, res) => {
               // update the lastModifiedAt field in the database
               const user = await mongoDb.collection('users').updateOne({email: email}, {$set: {lastModifiedAt: timeStampNow}});
               console.log("User updated: ", user);
+          }
           // if the user does not exist, create a new user
-          } else {
+          else {
               // currentUser object to be saved to the DB
               currentUser = {
                 name,
