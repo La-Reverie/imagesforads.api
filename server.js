@@ -96,7 +96,14 @@ app.post('/api/generate', async (req, res) => {
       n: 1,
     });
     
-    await app.storeFileByUrl(imageResponse.data[0].url, req);
+    const imageInfo = await app.storeFileByUrl(imageResponse.data[0].url, req);
+    app.saveSubmission({
+      userInput: req.body.userInput,
+      owner: imageInfo._id,
+      absoluteFilePath: imageInfo.absoluteFilePath,
+      conceptPrompt,
+      createdAt: Date.now(),
+    });
     res.send(imageResponse);
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
@@ -181,6 +188,15 @@ app.saveFileInfo = async function(imageInfo) {
   }
 }
 
+app.saveSubmission = async function(submissionInfo) {
+  try {
+    return await mongoDb.collection('generationRequests').insertOne(submissionInfo);
+  }
+  catch (err) {
+    console.log('Error saving submission:', err);
+  }
+}
+
 // Called by storeFileByUrl to handle the actual saving of the file
 app.downloadFile = async (url, filePath, fileName, currentUserObj) => {
   const absoluteFilePath = path.join(filePath, fileName);
@@ -207,7 +223,7 @@ app.downloadFile = async (url, filePath, fileName, currentUserObj) => {
       }
     });
 
-    app.saveFileInfo({
+    const imageInfo = {
       fileName: fileNameWithExt,
       absoluteFilePath: absoluteFilePathWithExt,
       filePath,
@@ -215,7 +231,11 @@ app.downloadFile = async (url, filePath, fileName, currentUserObj) => {
       ext: fileMetadata.ext,
       owner: currentUserObj._id,
       createdAt: Date.now(),
-    });
+    };
+
+    const result = await app.saveFileInfo(imageInfo);
+    imageInfo._id = result.insertedId;
+    return imageInfo;
   });
 };
 
@@ -234,6 +254,7 @@ app.storeFileByUrl = async function (imageUrl, req) {
     if (!fs.existsSync(path.join(__dirname, SAVE_FILE_PATH))) {
       fs.mkdirSync(path.join(__dirname, SAVE_FILE_PATH));
     }
+
     await app.downloadFile(imageUrl, filePath, fileName, currentUserObj);
     console.log(`Image saved as ${fileName}`);
     return fileName;
