@@ -222,6 +222,7 @@ app.downloadFile = async (url, filePath, fileName, currentUserObj) => {
         console.log('Error renaming file:', err);
       }
     });
+
     const imageInfo = {
       fileName: fileNameWithExt,
       absoluteFilePath: absoluteFilePathWithExt,
@@ -253,7 +254,10 @@ app.storeFileByUrl = async function (imageUrl, req) {
     if (!fs.existsSync(path.join(__dirname, SAVE_FILE_PATH))) {
       fs.mkdirSync(path.join(__dirname, SAVE_FILE_PATH));
     }
-    return await app.downloadFile(imageUrl, filePath, fileName, currentUserObj);
+
+    await app.downloadFile(imageUrl, filePath, fileName, currentUserObj);
+    console.log(`Image saved as ${fileName}`);
+    return fileName;
   } catch (error) {
     console.error('Error downloading image:', error);
     throw new Error(error);
