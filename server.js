@@ -172,8 +172,18 @@ function getFileName(currentUserObj) {
   return `${currentUserObj._id}_${Date.now()}_${Math.floor(Math.random() * 99999999)}`;
 }
 
+app.saveFileInfo = async function(imageInfo) {
+  try {
+    return await mongoDb.collection('images').insertOne(imageInfo);
+  }
+  catch (err) {
+    console.log('Error saving file info:', err);
+  }
+}
+
 // Called by storeFileByUrl to handle the actual saving of the file
-app.downloadFile = async (url, filePath) => {
+app.downloadFile = async (url, filePath, fileName, currentUserObj) => {
+  const absoluteFilePath = path.join(filePath, fileName);
   const response = await axios({
     url,
     responseType: 'stream',
@@ -181,19 +191,30 @@ app.downloadFile = async (url, filePath) => {
 
   // write file to disk
   return new Promise((resolve, reject) => {
-    response.data.pipe(fs.createWriteStream(filePath))
-      .on('finish', () => resolve(filePath))
+    response.data.pipe(fs.createWriteStream(absoluteFilePath))
+      .on('finish', () => resolve(absoluteFilePath, currentUserObj))
       .on('error', (e) => reject(e));
-  }).then(async filePath => {
+  }).then(async (absoluteFilePath) => {
     // read the first 4100 bytes of the file to determine the file type
-    const buffer = await readChunk(filePath, {length: 4100});
+    const buffer = await readChunk(absoluteFilePath, {length: 4100});
     const fileMetadata = await fileTypeFromBuffer(buffer);
-
+    const fileNameWithExt = `${fileName}.${fileMetadata.ext}`;
+    const absoluteFilePathWithExt = `${absoluteFilePath}.${fileMetadata.ext}`;
     // rename the file on disk to include the file extension
-    fs.rename(filePath, `${filePath}.${fileMetadata.ext}`, (err) => {
+    fs.rename(absoluteFilePath, absoluteFilePathWithExt, (err) => {
       if (err) {
         console.log('Error renaming file:', err);
       }
+    });
+
+    app.saveFileInfo({
+      fileName: fileNameWithExt,
+      absoluteFilePath: absoluteFilePathWithExt,
+      filePath,
+      mimeType: fileMetadata.mime,
+      ext: fileMetadata.ext,
+      owner: currentUserObj._id,
+      createdAt: Date.now(),
     });
   });
 };
@@ -205,16 +226,15 @@ app.storeFileByUrl = async function (imageUrl, req) {
     return false;
   }
 
-  const currentUserObj = JSON.parse(req.body.currentUser);
+  const currentUserObj = await JSON.parse(req.body.currentUser);
   const fileName = getFileName(currentUserObj);
-  const filePath = path.join(__dirname, SAVE_FILE_PATH, fileName);
+  const filePath = path.join(__dirname, SAVE_FILE_PATH);
   try {
     // Ensure the downloads directory exists
     if (!fs.existsSync(path.join(__dirname, SAVE_FILE_PATH))) {
       fs.mkdirSync(path.join(__dirname, SAVE_FILE_PATH));
     }
-
-    await app.downloadFile(imageUrl, filePath);
+    await app.downloadFile(imageUrl, filePath, fileName, currentUserObj);
     console.log(`Image saved as ${fileName}`);
     return fileName;
   } catch (error) {
