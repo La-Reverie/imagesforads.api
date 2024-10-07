@@ -1,6 +1,6 @@
 import express from 'express';
 import connectToDatabase from '../services/MongoConnect.js';
-import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 const mongoDb = await connectToDatabase();
