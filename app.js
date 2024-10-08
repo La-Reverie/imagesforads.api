@@ -5,6 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import generateRouter from './routes/generate.js';
 import authenticateRouter from './routes/authenticate.js';
+import trackRouter from './routes/track.js';
 import connectToDatabase from './services/MongoConnect.js';
 import { ObjectId } from 'mongodb';
 import e from 'express';
@@ -23,7 +24,7 @@ app.use(bodyParser.json());
 
 app.use('/api/authenticate', authenticateRouter);
 app.use('/api/generate', generateRouter);
-
+app.use('/api/track', trackRouter);
 app.post('/api/subscribe', async (req, res) => {
   const user = await JSON.parse(req.body.currentUser);
   try {

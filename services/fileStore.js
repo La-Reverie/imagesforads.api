@@ -9,7 +9,7 @@ import connectToDatabase from './MongoConnect.js';
 const mongoDb = await connectToDatabase();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SAVE_FILE_PATH = '../../generated-images';
+const SAVE_FILE_PATH = '../generated-images';
 
 const storeFileByUrl = async function(imageUrl, req) {
   const currentUserObj = await JSON.parse(req.body.currentUser);

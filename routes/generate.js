@@ -20,15 +20,20 @@ router.post('/', async (req, res) => {
     const generatedImageResponse = await generateImage(conceptPrompt);
     const imageInfo = await storeFileByUrl(generatedImageResponse.data[0].url, req);
 
-    saveSubmission({
+    const submission = await saveSubmission({
       userInput: req.body.userInput,
       owner: imageInfo._id,
       absoluteFilePath: imageInfo.absoluteFilePath,
       conceptPrompt,
       createdAt: Date.now(),
     }, req);
-
-    res.send(generatedImageResponse);
+    console.log('submission', submission);
+    console.log('generatedImageResponse', generatedImageResponse);
+    res.send({
+      submissionId: submission.insertedId,
+      imageUrl: generatedImageResponse.data[0].url,
+      imageId: imageInfo._id,
+    });
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
     res.status(500).send("Error generating concept");
