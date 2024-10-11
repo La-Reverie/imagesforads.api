@@ -11,25 +11,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // const SAVE_FILE_PATH = '../../generated-images';
 const SAVE_FILE_PATH = '../../html/public/generated-images';
+// TODO: MOVE TO CONSTANTS FILE
+const BASE_URL = 'https://images.forads.ai';
+const PUBLIC_IMAGE_PATH = '/generated-images/';
 
 const storeFileByUrl = async function(imageUrl, req) {
   const currentUserObj = await JSON.parse(req.body.currentUser);
   const fileName = getFileName(currentUserObj);
   const filePath = path.join(__dirname, SAVE_FILE_PATH);
-
+  const publicFileUrl = `${BASE_URL}${PUBLIC_IMAGE_PATH}${fileName}`;
   try {
     // Ensure the downloads directory exists
     if (!fs.existsSync(path.join(__dirname, SAVE_FILE_PATH))) {
       fs.mkdirSync(path.join(__dirname, SAVE_FILE_PATH));
     }
-    return await downloadFile(imageUrl, filePath, fileName, currentUserObj, req);
+    return await downloadFile(imageUrl, filePath, fileName, publicFileUrl, currentUserObj, req);
   } catch (error) {
     console.error('Error downloading image:', error);
     throw new Error(error);
   }
 };
 
-async function downloadFile(url, filePath, fileName, currentUserObj, req) {
+async function downloadFile(url, filePath, fileName, publicFileUrl,currentUserObj, req) {
   const absoluteFilePath = path.join(filePath, fileName);
   const response = await axios({
     url,
@@ -61,6 +64,7 @@ async function downloadFile(url, filePath, fileName, currentUserObj, req) {
       ext: fileMetadata.ext,
       owner: currentUserObj._id,
       createdAt: Date.now(),
+      publicFileUrl,
     };
 
     const result = await saveFileInfo(imageInfo, req);

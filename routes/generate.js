@@ -24,6 +24,7 @@ router.post('/', async (req, res) => {
       userInput: req.body.userInput,
       owner: imageInfo._id,
       absoluteFilePath: imageInfo.absoluteFilePath,
+      publicFileUrl: imageInfo.publicFileUrl,
       conceptPrompt,
       createdAt: Date.now(),
     }, req);
@@ -31,7 +32,7 @@ router.post('/', async (req, res) => {
     console.log('generatedImageResponse', generatedImageResponse);
     res.send({
       submissionId: submission.insertedId,
-      imageUrl: generatedImageResponse.data[0].url,
+      imageUrl: imageInfo.publicFileUrl,
       imageId: imageInfo._id,
     });
   } catch (error) {
