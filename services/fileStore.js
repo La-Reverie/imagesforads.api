@@ -1,81 +1,65 @@
 import axios from 'axios';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { fileTypeFromBuffer } from 'file-type';
-import { readChunk } from 'read-chunk';
+import mimeTypes from 'mime-types';
 import connectToDatabase from './MongoConnect.js';
 
 const mongoDb = await connectToDatabase();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-// const SAVE_FILE_PATH = '../../generated-images';
-const SAVE_FILE_PATH = '../../html/public/generated-images';
-// TODO: MOVE TO CONSTANTS FILE
-const BASE_URL = 'https://images.forads.ai';
-const PUBLIC_IMAGE_PATH = '/generated-images/';
 
-const storeFileByUrl = async function(imageUrl, req) {
-  const currentUserObj = await JSON.parse(req.body.currentUser);
-  const fileName = getFileName(currentUserObj);
-  const filePath = path.join(__dirname, SAVE_FILE_PATH);
-  const publicFileUrl = `${BASE_URL}${PUBLIC_IMAGE_PATH}${fileName}`;
+
+// BunnyCDN storage info
+const bunnyStorageZone = 'images-for-ads-ai';
+const fileSavePath = 'generated-images';
+const bunnyApiKey = '4af716bb-16ed-4132-afc5a9fccae5-7b63-4591';
+const bunnyStorageUrl = `https://storage.bunnycdn.com/${bunnyStorageZone}/${fileSavePath}`;
+const cdnBasePath = 'https://cdn.forads.ai/generated-images';
+
+async function uploadToCDN(imageUrl, req) {
   try {
-    // Ensure the downloads directory exists
-    if (!fs.existsSync(path.join(__dirname, SAVE_FILE_PATH))) {
-      fs.mkdirSync(path.join(__dirname, SAVE_FILE_PATH));
-    }
-    return await downloadFile(imageUrl, filePath, fileName, publicFileUrl, currentUserObj, req);
-  } catch (error) {
-    console.error('Error downloading image:', error);
-    throw new Error(error);
-  }
-};
-
-async function downloadFile(url, filePath, fileName, publicFileUrl,currentUserObj, req) {
-  const absoluteFilePath = path.join(filePath, fileName);
-  const response = await axios({
-    url,
-    responseType: 'stream',
-  });
-
-  // write file to disk
-  return new Promise((resolve, reject) => {
-    response.data.pipe(fs.createWriteStream(absoluteFilePath))
-      .on('finish', () => resolve(absoluteFilePath, currentUserObj))
-      .on('error', (e) => reject(e));
-  }).then(async (absoluteFilePath) => {
-    // read the first 4100 bytes of the file to determine the file type
-    const buffer = await readChunk(absoluteFilePath, {length: 4100});
-    const fileMetadata = await fileTypeFromBuffer(buffer);
-    const fileNameWithExt = `${fileName}.${fileMetadata.ext}`;
-    const absoluteFilePathWithExt = `${absoluteFilePath}.${fileMetadata.ext}`;
-    // rename the file on disk to include the file extension
-    fs.rename(absoluteFilePath, absoluteFilePathWithExt, (err) => {
-      if (err) {
-        console.log('Error renaming file:', err);
-      }
+    console.log('uploading image to CDN');
+    const mimeType = await getMimeType(imageUrl);
+    const extension = mimeTypes.extension(mimeType);
+    // Step 1: Download the image from the URL
+    const response = await axios({
+      url: imageUrl,
+      method: 'GET',
+      responseType: 'stream'
     });
+
+    const currentUserObj = await JSON.parse(req.body.currentUser);
+    const fileName = getFileName(currentUserObj, extension);
+    // Step 2: Upload the image directly to BunnyCDN
+    const uploadResponse = await axios.put(`${bunnyStorageUrl}/${fileName}`, response.data, {
+      headers: {
+        'AccessKey': bunnyApiKey,
+        'Content-Type': 'application/octet-stream', // For binary data
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
+    });
+
+    console.log('Image uploaded successfully:', uploadResponse.status);
+
     const imageInfo = {
-      fileName: fileNameWithExt,
-      absoluteFilePath: absoluteFilePathWithExt,
-      filePath,
-      mimeType: fileMetadata.mime,
-      ext: fileMetadata.ext,
+      originalUrl: imageUrl,
+      publicUrl: `${cdnBasePath}/${fileName}`,
+      fileName: fileName,
+      mimeType: mimeType,
+      ext: extension,
       owner: currentUserObj._id,
       createdAt: Date.now(),
-      publicFileUrl,
     };
 
     const result = await saveFileInfo(imageInfo, req);
     imageInfo._id = result.insertedId;
     return imageInfo;
-  });
-};
 
-const getFileName = function (currentUserObj) {
-  // user ID + current time + random number
-  return `${currentUserObj._id}_${Date.now()}_${Math.floor(Math.random() * 99999999)}`;
+  } catch (error) {
+    console.error('Error uploading to BunnyCDN:', error.message);
+  }
+}
+
+function getFileName (currentUserObj, extension) {
+  // user ID + current time + random number + extension
+  return `${currentUserObj._id}_${Date.now()}_${Math.floor(Math.random() * 99999999)}.${extension}`;
 }
 
 async function saveFileInfo(imageInfo, req) {
@@ -87,4 +71,17 @@ async function saveFileInfo(imageInfo, req) {
   }
 }
 
-export { storeFileByUrl };
+async function getMimeType(fileUrl) {
+  try {
+    // Make a HEAD request to get headers only
+    const response = await axios.head(fileUrl);
+    // Extract the Content-Type header
+    return response.headers['content-type'];
+  } catch (error) {
+    console.error('Error fetching MIME type:', error.message);
+    return null;
+  }
+}
+
+
+export { uploadToCDN };

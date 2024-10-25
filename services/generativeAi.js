@@ -16,7 +16,7 @@ const generateTextPrompt = (userInput) => {
 
 const generateImageConcept = async (req) => {
   const textPrompt = generateTextPrompt(req.body.userInput);
-  console.log('generating concept');
+  console.log('generating image concept');
   const conceptResponse = await openai.chat.completions.create({
     messages: [{ role: "user", content: textPrompt }],
     model: "gpt-3.5-turbo",
@@ -26,6 +26,7 @@ const generateImageConcept = async (req) => {
 }
 
 const generateImage = async (conceptPrompt) => {
+  console.log('generating image');
   const result = await openai.images.generate({
     prompt: conceptPrompt,
     model: 'dall-e-3',
