@@ -4,13 +4,12 @@ import connectToDatabase from './MongoConnect.js';
 
 const mongoDb = await connectToDatabase();
 
-
-// BunnyCDN storage info
-const bunnyStorageZone = 'images-for-ads-ai';
-const fileSavePath = 'generated-images';
-const bunnyApiKey = '4af716bb-16ed-4132-afc5a9fccae5-7b63-4591';
-const bunnyStorageUrl = `https://storage.bunnycdn.com/${bunnyStorageZone}/${fileSavePath}`;
-const cdnBasePath = 'https://cdn.forads.ai/generated-images';
+// Storage and CDN info
+const STORAGE_ZONE = 'images-for-ads-ai';
+const FILE_SAVE_PATH = 'generated-images';
+const CDN_API_KEY = process.env.BUNNYCDN_APY_KEY;
+const CDN_STORAGE_URL = `https://storage.bunnycdn.com/${STORAGE_ZONE}/${FILE_SAVE_PATH}`;
+const CDN_BASE_PATH = 'https://cdn.forads.ai/generated-images';
 
 async function uploadToCDN(imageUrl, req) {
   try {
@@ -27,9 +26,9 @@ async function uploadToCDN(imageUrl, req) {
     const currentUserObj = await JSON.parse(req.body.currentUser);
     const fileName = getFileName(currentUserObj, extension);
     // Step 2: Upload the image directly to BunnyCDN
-    const uploadResponse = await axios.put(`${bunnyStorageUrl}/${fileName}`, response.data, {
+    const uploadResponse = await axios.put(`${CDN_STORAGE_URL}/${fileName}`, response.data, {
       headers: {
-        'AccessKey': bunnyApiKey,
+        'AccessKey': CDN_API_KEY,
         'Content-Type': 'application/octet-stream', // For binary data
       },
       maxContentLength: Infinity,
@@ -40,7 +39,7 @@ async function uploadToCDN(imageUrl, req) {
 
     const imageInfo = {
       originalUrl: imageUrl,
-      publicUrl: `${cdnBasePath}/${fileName}`,
+      publicUrl: `${CDN_BASE_PATH }/${fileName}`,
       fileName: fileName,
       mimeType: mimeType,
       ext: extension,
