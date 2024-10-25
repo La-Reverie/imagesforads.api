@@ -1,5 +1,7 @@
 import { MongoClient } from 'mongodb';
 
+
+const database = (process.env.NODE_ENV === 'PROD') ? 'imagesforads' : 'imagesforads-test';
 const uri = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@imagesforads.sqyde.mongodb.net/?retryWrites=true&w=majority&appName=imagesforads`;
 let dbInstance;
 
@@ -20,8 +22,8 @@ async function connectToDatabase() {
     await client.connect();
 
     // Select the database you want to work with
-    dbInstance = client.db('imagesforads');
-    console.log('Connected to database successfully');
+    dbInstance = client.db(database);
+    console.log(`Connected to database ${database} successfully`);
 
     return dbInstance;
   } catch (error) {
