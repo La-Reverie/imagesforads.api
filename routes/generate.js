@@ -2,7 +2,7 @@ import express from 'express';
 import connectToDatabase from '../services/MongoConnect.js';
 import OpenAI from 'openai';
 import { generateImage, generateImageConcept } from '../services/generativeAi.js';
-import { storeFileByUrl } from '../services/fileStore.js';
+import { uploadToCDN } from '../services/fileStore.js';
 
 const router = express.Router();
 const OPEN_API_KEY = process.env.OPEN_API_KEY;
@@ -18,21 +18,12 @@ router.post('/', async (req, res) => {
   try {
     const conceptPrompt = await generateImageConcept(req);
     const generatedImageResponse = await generateImage(conceptPrompt);
-    const imageInfo = await storeFileByUrl(generatedImageResponse.data[0].url, req);
+    const imageInfo = await uploadToCDN(generatedImageResponse.data[0].url, req);
+    const submission = await saveSubmission(imageInfo, conceptPrompt, req);
 
-    const submission = await saveSubmission({
-      userInput: req.body.userInput,
-      owner: imageInfo._id,
-      absoluteFilePath: imageInfo.absoluteFilePath,
-      publicFileUrl: imageInfo.publicFileUrl,
-      conceptPrompt,
-      createdAt: Date.now(),
-    }, req);
-    console.log('submission', submission);
-    console.log('generatedImageResponse', generatedImageResponse);
     res.send({
       submissionId: submission.insertedId,
-      imageUrl: imageInfo.publicFileUrl,
+      imageUrl: imageInfo.publicUrl,
       imageId: imageInfo._id,
     });
   } catch (error) {
@@ -41,7 +32,16 @@ router.post('/', async (req, res) => {
   }
 });
 
-async function saveSubmission(submissionInfo, req) {
+async function saveSubmission(imageInfo, conceptPrompt, req) {
+  console.log('saving submission');
+  const submissionInfo = {
+    userInput: req.body.userInput,
+    owner: imageInfo._id,
+    absoluteFilePath: imageInfo.absoluteFilePath,
+    conceptPrompt,
+    createdAt: Date.now(),
+  };
+
   try {
     return await mongoDb.collection('generationRequests').insertOne(submissionInfo);
   }

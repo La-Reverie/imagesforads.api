@@ -6,7 +6,8 @@ module.exports = {
       env: {
         NODE_ENV: "prod",
         PORT: 3000,
-        OPENAI_API_KEY: process.env.OPENAI_API_KEY
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+        BUNNYCDN_APY_KEY: process.env.BUNNYCDN_APY_KEY,
       }
     }
   ]
