@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 const mongoDb = await connectToDatabase();
+const NEW_USER_CREDITS = 50;
 
 router.post('/', async (req, res) => {
   try {
@@ -37,6 +38,7 @@ router.post('/', async (req, res) => {
                 email,
                 createdAt: timeStampNow,
                 lastModifiedAt: timeStampNow,
+                creditBalance: NEW_USER_CREDITS,
               };
               const user = await mongoDb.collection("users").insertOne(currentUser);
               // add the newly created user's _id to the currentUser object
