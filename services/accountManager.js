@@ -23,7 +23,7 @@ async function getAccountByUserId(userId) {
     // if the user does not exist, create a new user and a new account
     else {
       account = await createAccount(userId);
-      const amount = 10;
+      const amount = 100;
       const transactionType = 'accountCreate';
       account = fundAccount(account, userId, amount, transactionType);
     }
@@ -61,13 +61,12 @@ async function createAccount(userId) {
 }
 
 async function updateCreditBalance(accountId, currentCreditBalance, amountToAdd) {
-  console.log('##################### updateCreditBalance ####################');
   const timeStampNow = Date.now();
   try {
     const isVerified = verifyCreditBalance(accountId, currentCreditBalance);
     if (isVerified) {
       const newBalance = currentCreditBalance + amountToAdd;
-      const response = await mongoDb.collection('accounts').updateOne({_id: new ObjectId(accountId.toString())}, {$set: {lastModifiedAt: timeStampNow, creditBalance: newBalance}});
+      const response = await mongoDb.collection('accounts').updateOne({_id: new ObjectId(accountId)}, {$set: {lastModifiedAt: timeStampNow, creditBalance: newBalance}});
       return currentCreditBalance + amountToAdd;
     }
   } catch(error) {
@@ -77,8 +76,12 @@ async function updateCreditBalance(accountId, currentCreditBalance, amountToAdd)
 }
 
 async function verifyCreditBalance(accountId, currentCreditBalance) {
-  const account = await mongoDb.collection('accounts').findOne({_id: new ObjectId(accountId.toString())});
-  return account.creditBalance === currentCreditBalance;
+  return getCreditBalance(accountId) === currentCreditBalance;
 }
 
-export { createAccount, getAccountByUserId, updateCreditBalance };
+async function getCreditBalance(accountId) {
+  const account = await mongoDb.collection('accounts').findOne({_id: new ObjectId(accountId)});
+  return account.creditBalance;
+}
+
+export { createAccount, getAccountByUserId, updateCreditBalance, getCreditBalance};
