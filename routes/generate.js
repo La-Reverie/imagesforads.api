@@ -42,7 +42,16 @@ router.post('/', async (req, res) => {
     });
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
-    res.status(500).send("Error generating concept");
+
+    // Check for known error properties
+    const errorCode = error.code || 'unknown_error';
+    const errorMessage = error.message || 'An error occurred while generating the concept';
+
+    // Send a structured error response
+    res.status(500).json({
+      code: errorCode,
+      message: errorMessage
+    });
   }
 });
 
