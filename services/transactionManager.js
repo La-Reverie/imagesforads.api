@@ -3,7 +3,7 @@ import { updateCreditBalance } from './accountManager.js';
 
 const mongoDb = await connectToDatabase();
 
-async function debitAccount(account, userId, positiveAmount, transactionType) {
+async function debitTransaction(account, userId, positiveAmount, transactionType) {
   const amount = positiveAmount * -1;
   try {
     const timeStampNow = Date.now();
@@ -29,7 +29,7 @@ async function debitAccount(account, userId, positiveAmount, transactionType) {
   }
 }
 
-async function fundAccount(account, userId, amount, transactionType) {
+async function fundTransaction(account, userId, amount, transactionType) {
   try {
     const timeStampNow = Date.now();
     const balanceAfterTransaction = account.creditBalance + amount;
@@ -53,4 +53,4 @@ async function fundAccount(account, userId, amount, transactionType) {
   }
 }
 
-export { debitAccount, fundAccount };
+export { debitTransaction, fundTransaction };

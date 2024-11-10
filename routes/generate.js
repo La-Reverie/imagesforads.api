@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { generateImage, generateImageConcept } from '../services/generativeAi.js';
 import { uploadToCDN } from '../services/fileStore.js';
 import { getCreditBalance } from '../services/accountManager.js';
-import { debitAccount } from '../services/transactionManager.js';
+import { debitTransaction } from '../services/transactionManager.js';
 
 
 const router = express.Router();
@@ -26,6 +26,13 @@ router.post('/', async (req, res) => {
     const creditBalance = await getCreditBalance(account._id);
     if (creditBalance < CREDITS_TO_GENERATE_IMAGE) {
       // TODO inform frontend that credit balance is low
+      const errorCode = 'LOW_CREDIT_BALANCE';
+      const errorMessage = 'Your credit balance is low! Please ad credits to continue.';
+      // Send a structured error response
+      res.status(500).json({
+        code: errorCode,
+        message: errorMessage
+      });
       return false;
     }
     const conceptPrompt = await generateImageConcept(req);
@@ -33,7 +40,7 @@ router.post('/', async (req, res) => {
     const imageInfo = await uploadToCDN(generatedImageResponse.data[0].url, req);
     const submission = await saveSubmission(imageInfo, conceptPrompt, req);
     // debit credits
-    const updatedAccount = await debitAccount(account, currentUser._id, CREDITS_TO_GENERATE_IMAGE, 'image_generation');
+    const updatedAccount = await debitTransaction(account, currentUser._id, CREDITS_TO_GENERATE_IMAGE, 'image_generation');
     res.send({
       submissionId: submission.insertedId,
       imageUrl: imageInfo.publicUrl,

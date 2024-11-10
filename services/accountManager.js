@@ -1,6 +1,6 @@
 import axios from 'axios';
 import connectToDatabase from './MongoConnect.js';
-import { fundAccount } from './transactionManager.js';
+import { fundTransaction } from './transactionManager.js';
 import { ObjectId } from 'mongodb';
 
 const mongoDb = await connectToDatabase();
@@ -25,7 +25,7 @@ async function getAccountByUserId(userId) {
       account = await createAccount(userId);
       const amount = 100;
       const transactionType = 'accountCreate';
-      account = fundAccount(account, userId, amount, transactionType);
+      account = fundTransaction(account, userId, amount, transactionType);
     }
     return account;
   } catch (error) {
