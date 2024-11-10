@@ -27,9 +27,10 @@ router.post('/', async (req, res) => {
     if (creditBalance < CREDITS_TO_GENERATE_IMAGE) {
       // TODO inform frontend that credit balance is low
       const errorCode = 'LOW_CREDIT_BALANCE';
-      const errorMessage = 'Your credit balance is low! Please ad credits to continue.';
+      const errorMessage = 'Your credit balance is low! Please add credits to continue.';
       // Send a structured error response
       res.status(500).json({
+        isError: true,
         code: errorCode,
         message: errorMessage
       });
