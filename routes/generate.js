@@ -3,9 +3,9 @@ import connectToDatabase from '../services/MongoConnect.js';
 import OpenAI from 'openai';
 import { generateImage, generateImageConcept } from '../services/generativeAi.js';
 import { uploadToCDN } from '../services/fileStore.js';
-import multer from 'multer'; // Necesitamos multer para manejar la carga de archivos
-import FormData from 'form-data'; // Para crear y manejar el FormData
-import axios from 'axios'; // Usar axios para manejar solicitudes
+import multer from 'multer'; 
+import FormData from 'form-data'; 
+import axios from 'axios'; 
 
 const router = express.Router();
 const OPEN_API_KEY = process.env.OPENAI_API_KEY;
@@ -54,7 +54,14 @@ router.post('/', async (req, res) => {
     });
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
-    res.status(500).send("Error generating concept");
+    // Check for known error properties
+    const errorCode = error.code || 'unknown_error';
+    const errorMessage = error.message || 'An error occurred while generating the concept';
+    // Send a structured error response
+    res.status(500).json({
+      code: errorCode,
+      message: errorMessage
+    });
   }
 });
 
@@ -107,8 +114,7 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
     // We get the image back and store it here
     const imageUrl = data.data[0].url;
     res.json({ data: [{ url: imageUrl }] });
-    
-  } catch (error) {
+    } catch (error) {
     console.error('Error processing inpainting request:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
