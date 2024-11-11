@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import generateRouter from './routes/generate.js';
 import authenticateRouter from './routes/authenticate.js';
 import trackRouter from './routes/track.js';
+import paymentsRouter from './routes/payments.js';
 import connectToDatabase from './services/MongoConnect.js';
 import { ObjectId } from 'mongodb';
 import { authenticateToken } from './services/authMiddleware.js';
@@ -25,6 +26,7 @@ app.use(bodyParser.json());
 app.use('/api/authenticate', authenticateRouter);
 app.use('/api/generate', generateRouter);
 app.use('/api/track', trackRouter);
+app.use('/api/payments', paymentsRouter);
 app.post('/api/subscribe', authenticateToken, async (req, res) => {
   const user = await JSON.parse(req.body.currentUser);
   try {

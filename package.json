@@ -19,6 +19,7 @@
     "jsonwebtoken": "^9.0.2",
     "mime-types": "^2.1.35",
     "mongodb": "^6.9.0",
-    "openai": "^4.57.3"
+    "openai": "^4.57.3",
+    "square": "^38.2.0"
   }
 }
