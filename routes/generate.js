@@ -1,6 +1,7 @@
 import express from 'express';
 import connectToDatabase from '../services/MongoConnect.js';
 import OpenAI from 'openai';
+import { authenticateToken } from '../services/authMiddleware.js';
 import { generateImage, generateImageConcept } from '../services/generativeAi.js';
 import { uploadToCDN } from '../services/fileStore.js';
 import { getCreditBalance } from '../services/accountManager.js';
@@ -16,6 +17,8 @@ const CREDITS_TO_GENERATE_IMAGE = 5;
 const openai = new OpenAI({
   apiKey: OPEN_API_KEY,
 });
+
+router.use(authenticateToken);
 
 router.post('/', async (req, res) => {
   try {
