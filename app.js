@@ -8,7 +8,7 @@ import authenticateRouter from './routes/authenticate.js';
 import trackRouter from './routes/track.js';
 import connectToDatabase from './services/MongoConnect.js';
 import { ObjectId } from 'mongodb';
-import e from 'express';
+import { authenticateToken } from './services/authMiddleware.js';
 
 dotenv.config();
 
@@ -25,7 +25,7 @@ app.use(bodyParser.json());
 app.use('/api/authenticate', authenticateRouter);
 app.use('/api/generate', generateRouter);
 app.use('/api/track', trackRouter);
-app.post('/api/subscribe', async (req, res) => {
+app.post('/api/subscribe', authenticateToken, async (req, res) => {
   const user = await JSON.parse(req.body.currentUser);
   try {
     const existingUser = await mongoDb.collection('users').findOne({_id: new ObjectId(user._id)});

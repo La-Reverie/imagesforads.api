@@ -1,9 +1,10 @@
 import express from 'express';
 import connectToDatabase from '../services/MongoConnect.js';
+import { authenticateToken } from '../services/authMiddleware.js';
 
 const router = express.Router();
-
 const mongoDb = await connectToDatabase();
+router.use(authenticateToken);
 
 router.post('/', async (req, res) => {
   try {

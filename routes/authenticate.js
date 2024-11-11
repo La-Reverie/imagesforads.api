@@ -2,6 +2,7 @@ import express from 'express';
 import connectToDatabase from '../services/MongoConnect.js';
 import { getUserByEmail } from '../services/userManager.js';
 import { getAccountByUserId } from '../services/accountManager.js';
+import { generateAuthToken } from '../services/authMiddleware.js';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
@@ -17,10 +18,13 @@ router.post('/', async (req, res) => {
       const { name, picture, email } = decodedGoogleObj;
       const currentUser = await getUserByEmail(name, picture, email);
       const account = await getAccountByUserId(currentUser._id);
-      const token = jwt.sign(
-        { exp: Math.floor(Date.now() / 1000) + (60 * 60), }, // token good for 1 hour
-        'authenticated',
-      );
+      const token = generateAuthToken({
+        name,
+        picture,
+        email,
+        userId: currentUser._id,
+        accountId: account._id
+      });
 
       res.json({
         token,
