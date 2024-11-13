@@ -3,6 +3,7 @@ import connectToDatabase from '../services/MongoConnect.js';
 import { authenticateToken } from '../services/authMiddleware.js';
 import { Client, Environment } from 'square';
 import bodyParser from 'body-parser';
+import { getOrCreateSquareAccount } from '../services/square.js';
 
 const router = express.Router();
 const mongoDb = await connectToDatabase();
@@ -32,6 +33,20 @@ router.post('/', async (req, res) => {
     res.json({ message: 'Payment successful!', payment: paymentResponse.result });
   } catch (error) {
     res.status(500).json({ message: 'Payment failed', error: error.message });
+  }
+});
+
+/* Saves a payment type and creates a new "customer" in Square CRM */
+router.post('/save', async (req, res) => {
+  try {
+
+
+    const squareAccount = await getOrCreateSquareAccount(req.body, squareClient);
+    // Send a success response back to the frontend
+    res.status(200).json({ message: 'Payment processed successfully.' });
+  } catch (error) {
+    console.error('Error processing payment:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
