@@ -42,6 +42,9 @@ router.post('/save', async (req, res) => {
 
 
     const squareAccount = await getOrCreateSquareAccount(req.body, squareClient);
+    console.log('#################################################');
+    console.log(squareAccount);
+    console.log('#################################################');
     // Send a success response back to the frontend
     res.status(200).json({ message: 'Payment processed successfully.' });
   } catch (error) {

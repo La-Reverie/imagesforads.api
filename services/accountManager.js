@@ -5,31 +5,41 @@ import { ObjectId } from 'mongodb';
 
 const mongoDb = await connectToDatabase();
 
+async function getOrCreateAccountByUserId(userId) {
+  // return existing account
+  const existingAccount = await getAccountByUserId(userId);
+
+  if (!!existingAccount) {
+    return existingAccount;
+  }
+  // if no existing account, create one
+  const newAccount = await createAccount(userId);
+  // then fund the new account and return it
+  const amount = 100;
+  const transactionType = 'accountCreate';
+  const account = await fundTransaction(newAccount, userId, amount, transactionType);
+  return account;
+}
+
 async function getAccountByUserId(userId) {
-  const timeStampNow = Date.now();
   try {
     // Check if user exists in the database
+    const timeStampNow = Date.now();
     const existingAccount = await mongoDb.collection('accounts').findOne({ownerId: userId});
-    let account;
-    // if the account exists, update the lastModifiedAt field in the database
     if (!!existingAccount) {
-        account = {
-          ...existingAccount,
-          lastModifiedAt: timeStampNow,
-        };
-        const response = await mongoDb.collection('accounts').updateOne({ownerId: userId}, {$set: {lastModifiedAt: timeStampNow}});
-        console.log("Account updated: ", response);
+      const account = {
+        ...existingAccount,
+        lastModifiedAt: timeStampNow,
+      };
+
+      await mongoDb.collection('accounts').updateOne({ownerId: userId}, {$set: {lastModifiedAt: timeStampNow}});
+      return account;
     }
-    // if the user does not exist, create a new user and a new account
-    else {
-      account = await createAccount(userId);
-      const amount = 100;
-      const transactionType = 'accountCreate';
-      account = fundTransaction(account, userId, amount, transactionType);
-    }
-    return account;
+
+    return false;
   } catch (error) {
     console.error('Error getting account:', error.message);
+    // TODO  implement error
   }
 }
 
@@ -84,4 +94,4 @@ async function getCreditBalance(accountId) {
   return account.creditBalance;
 }
 
-export { createAccount, getAccountByUserId, updateCreditBalance, getCreditBalance};
+export { createAccount, getOrCreateAccountByUserId, updateCreditBalance, getCreditBalance};

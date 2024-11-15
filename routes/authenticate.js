@@ -1,7 +1,7 @@
 import express from 'express';
 import connectToDatabase from '../services/MongoConnect.js';
 import { getUserByEmail } from '../services/userManager.js';
-import { getAccountByUserId } from '../services/accountManager.js';
+import { getOrCreateAccountByUserId } from '../services/accountManager.js';
 import { generateAuthToken } from '../services/authMiddleware.js';
 import jwt from 'jsonwebtoken';
 
@@ -17,7 +17,7 @@ router.post('/', async (req, res) => {
     if (decodedGoogleObj && decodedGoogleObj.email_verified) {
       const { name, picture, email } = decodedGoogleObj;
       const currentUser = await getUserByEmail(name, picture, email);
-      const account = await getAccountByUserId(currentUser._id);
+      const account = await getOrCreateAccountByUserId(currentUser._id);
       const token = generateAuthToken({
         name,
         picture,
