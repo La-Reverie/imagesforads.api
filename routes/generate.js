@@ -1,16 +1,24 @@
 import express from 'express';
 import connectToDatabase from '../services/MongoConnect.js';
 import OpenAI from 'openai';
+import { authenticateToken } from '../services/authMiddleware.js';
 import { generateImage, generateImageConcept } from '../services/generativeAi.js';
 import { uploadToCDN } from '../services/fileStore.js';
 import multer from 'multer'; 
 import FormData from 'form-data'; 
 import axios from 'axios'; 
 
+
+import { getCreditBalance } from '../services/accountManager.js';
+import { debitTransaction } from '../services/transactionManager.js';
+
+
 const router = express.Router();
-const OPEN_API_KEY = process.env.OPENAI_API_KEY;
+const OPEN_API_KEY = process.env.OPEN_API_KEY;
 
 const mongoDb = await connectToDatabase();
+
+const CREDITS_TO_GENERATE_IMAGE = 5;
 
 const openai = new OpenAI({
   apiKey: OPEN_API_KEY,
@@ -39,18 +47,38 @@ async function saveSubmission(imageInfo, conceptPrompt, req) {
 const upload = multer();
 
 // Ruta principal existente
+router.use(authenticateToken);
+
 router.post('/', async (req, res) => {
-  console.log('Generate');
   try {
+    console.log('Generate');
+    const account = JSON.parse(req.body.account);
+    const currentUser = JSON.parse(req.body.currentUser);
+    // check credits
+    const creditBalance = await getCreditBalance(account._id);
+    if (creditBalance < CREDITS_TO_GENERATE_IMAGE) {
+      // TODO inform frontend that credit balance is low
+      const errorCode = 'LOW_CREDIT_BALANCE';
+      const errorMessage = 'Your credit balance is low! Please add credits to continue.';
+      // Send a structured error response
+      res.status(500).json({
+        isError: true,
+        code: errorCode,
+        message: errorMessage
+      });
+      return false;
+    }
     const conceptPrompt = await generateImageConcept(req);
     const generatedImageResponse = await generateImage(conceptPrompt);
     const imageInfo = await uploadToCDN(generatedImageResponse.data[0].url, req);
     const submission = await saveSubmission(imageInfo, conceptPrompt, req);
-
+    // debit credits
+    const updatedAccount = await debitTransaction(account, currentUser._id, CREDITS_TO_GENERATE_IMAGE, 'image_generation');
     res.send({
       submissionId: submission.insertedId,
       imageUrl: imageInfo.publicUrl,
       imageId: imageInfo._id,
+      account: updatedAccount,
     });
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
