@@ -102,7 +102,7 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
   console.log('Inpainting request received');
 
   try {
-    const { prompt, n, size } = req.body;
+    const { prompt, n } = req.body;
 
     // Validación básica
     // we check if we have the image and the mask
@@ -115,34 +115,66 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
       return res.status(400).json({ error: 'Prompt is required.' });
     }
 
+    // Obtener los buffers de las imágenes
+    const imageBuffer = req.files['image'][0].buffer;
+    const maskBuffer = req.files['mask'][0].buffer;
+
+    // Función para obtener las dimensiones de una imagen PNG
+    function getImageDimensions(buffer) {
+      // Leemos el ancho y alto desde el chunk IHDR del PNG
+      const width = buffer.readUInt32BE(16);
+      const height = buffer.readUInt32BE(20);
+      return { width, height };
+    }
+
+    // Obtener dimensiones de la imagen
+    const imageDimensions = getImageDimensions(imageBuffer);
+
+    // This is from OPENAI, these are the image sizes they allow
+    const allowedSizes = ['256x256', '512x512', '1024x1024'];
+    const sizeFromImage = `${imageDimensions.width}x${imageDimensions.height}`;
+
+    if (!allowedSizes.includes(sizeFromImage)) {
+      return res.status(400).json({
+        error: `Invalid image size ${sizeFromImage}. Allowed sizes are ${allowedSizes.join(', ')}.`,
+      });
+    }
+
+
+
     // We create the FormData instance
     const formData = new FormData();
 
     // Then we add the images to the buffer
-    formData.append('image', req.files['image'][0].buffer, 'image.png');
-    formData.append('mask', req.files['mask'][0].buffer, 'mask.png');
+    formData.append('image', imageBuffer, 'image.png');
+    formData.append('mask', maskBuffer, 'mask.png');
 
     // We add the prompt and the other data from OPENAI
     formData.append('prompt', prompt);
     formData.append('n', n || '1');
-    formData.append('size', size || '1024x1024');
+    formData.append('size', size || sizeFromImage);
 
     // We send the request and await for the response
-    const response = await axios.post('https://api.openai.com/v1/images/edits', formData, {
+    const openaiResponse = await axios.post('https://api.openai.com/v1/images/edits', formData, {
       headers: {
         'Authorization': `Bearer ${OPEN_API_KEY}`,
         ...formData.getHeaders(),
       },
     });
 
-    const data = response.data;
+    const responseData = openaiResponse.data;
 
-    console.log('OpenAI response:', data);
+    console.log('OpenAI response:', responseData);
 
     // We get the image back and store it here
-    const imageUrl = data.data[0].url;
-    res.json({ data: [{ url: imageUrl }] });
-    } catch (error) {
+    const generatedImages = responseData.data; 
+    if (generatedImages && generatedImages.length > 0) {
+      const imageUrl = generatedImages[0].url;
+      res.json({ images: [{ url: imageUrl }] });
+    } else {
+      res.status(500).json({ error: 'No images returned from OpenAI API.' });
+    }
+  } catch (error) {
     console.error('Error processing inpainting request:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
