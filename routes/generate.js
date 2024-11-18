@@ -43,7 +43,8 @@ async function saveSubmission(imageInfo, conceptPrompt, req) {
   }
 }
 
-// Configuración de multer para manejar la carga de archivos
+// Initialize Multer Singleton
+// TODO: implement Multer for existing file uploads https://github.com/La-Reverie/imagesforads/issues/68
 const upload = multer();
 
 // Ruta principal existente
