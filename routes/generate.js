@@ -15,7 +15,6 @@ import { debitTransaction } from '../services/transactionManager.js';
 
 const router = express.Router();
 const OPEN_API_KEY = process.env.OPENAI_API_KEY;
-
 const mongoDb = await connectToDatabase();
 
 const CREDITS_TO_GENERATE_IMAGE = 5;
@@ -104,7 +103,6 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
 
   try {
     const { prompt, n } = req.body;
-    console.log('OPEN_API_KEY:', OPEN_API_KEY);
 
     // Validación básica
     // we check if we have the image and the mask
