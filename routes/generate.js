@@ -14,8 +14,7 @@ import { debitTransaction } from '../services/transactionManager.js';
 
 
 const router = express.Router();
-const OPEN_API_KEY = process.env.OPEN_API_KEY;
-
+const OPEN_API_KEY = process.env.OPENAI_API_KEY;
 const mongoDb = await connectToDatabase();
 
 const CREDITS_TO_GENERATE_IMAGE = 5;
@@ -153,7 +152,7 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
     // We add the prompt and the other data from OPENAI
     formData.append('prompt', prompt);
     formData.append('n', n || '1');
-    formData.append('size', size || sizeFromImage);
+    formData.append('size', sizeFromImage);
 
     // We send the request and await for the response
     const openaiResponse = await axios.post('https://api.openai.com/v1/images/edits', formData, {
