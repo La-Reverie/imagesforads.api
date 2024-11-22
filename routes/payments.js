@@ -3,7 +3,7 @@ import connectToDatabase from '../services/MongoConnect.js';
 import { authenticateToken } from '../services/authMiddleware.js';
 import { Client, Environment } from 'square';
 import bodyParser from 'body-parser';
-import { getOrCreateSquareAccount } from '../services/square.js';
+import { getOrCreateSquareCustomer } from '../services/square.js';
 
 const router = express.Router();
 const mongoDb = await connectToDatabase();
@@ -39,13 +39,29 @@ router.post('/', async (req, res) => {
 /* Saves a payment type and creates a new "customer" in Square CRM */
 router.post('/save', async (req, res) => {
   try {
+    console.log('REQ BODY::::: ', req.body);
 
+    const squareCustomer = await getOrCreateSquareCustomer(req.body, squareClient);
+    console.log('SQUARE ACCOUNT::::: ', squareCustomer);
 
-    const squareAccount = await getOrCreateSquareAccount(req.body, squareClient);
+    const paymentData = {
+      payment: {
+        Token: req.body.token,
+        details: req.body.details,
+        type: 'card',
+      },
+      accountId: req.body.accountId,
+      userId: req.body.userId,
+      squareCustomerId: squareCustomer.id,
+      address: squareCustomer.address,
+    };
+
+    const newPayment = await mongoDb.collection('payments').insertOne(paymentData);
+
     // Send a success response back to the frontend
-    res.status(200).json({ message: 'Payment processed successfully.' });
+    res.status(200).json({ message: 'Payment processed successfully.', payment: newPayment });
   } catch (error) {
-    console.error('Error processing payment:', error);
+    console.error('Error saving payment:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
