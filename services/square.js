@@ -1,11 +1,11 @@
 import crypto from 'crypto';
 
-const getOrCreateSquareAccount = async (reqBody, squareClient) => {
-  const existingSquareAccount = await getSquareAccount(reqBody.email, squareClient);
-  return existingSquareAccount || await createSquareAccount(reqBody, squareClient);
+const getOrCreateSquareCustomer = async (reqBody, squareClient) => {
+  const existingSquareCustomer = await getSquareCustomer(reqBody.email, squareClient);
+  return existingSquareCustomer || await createSquareCustomer(reqBody, squareClient);
 };
 
-const getSquareAccount = async (email, squareClient) => {
+const getSquareCustomer = async (email, squareClient) => {
   try {
     const searchResponse = await squareClient.customersApi.searchCustomers({
       query: {
@@ -16,7 +16,7 @@ const getSquareAccount = async (email, squareClient) => {
         }
       }
     });
-
+    // console.log('CUSTOMERS::::: ', searchResponse.result);
     return searchResponse.result?.customers[0];
   } catch(error) {
     console.log(error);
@@ -24,7 +24,7 @@ const getSquareAccount = async (email, squareClient) => {
   }
 }
 
-const createSquareAccount = async (reqBody, squareClient) => {
+const createSquareCustomer = async (reqBody, squareClient) => {
   const {
     details,
     companyName,
@@ -51,4 +51,4 @@ const createSquareAccount = async (reqBody, squareClient) => {
   }
 };
 
-export { getOrCreateSquareAccount };
+export { getOrCreateSquareCustomer };

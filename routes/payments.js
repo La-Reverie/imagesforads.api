@@ -3,7 +3,8 @@ import connectToDatabase from '../services/MongoConnect.js';
 import { authenticateToken } from '../services/authMiddleware.js';
 import { Client, Environment } from 'square';
 import bodyParser from 'body-parser';
-import { getOrCreateSquareAccount } from '../services/square.js';
+import { getOrCreateSquareCustomer } from '../services/square.js';
+import crypto from 'crypto';
 
 const router = express.Router();
 const mongoDb = await connectToDatabase();
@@ -14,24 +15,24 @@ const squareClient = new Client({
   environment: Environment.Sandbox, // Change to Environment.Production in production
   accessToken: process.env.SQUARE_ACCESS_TOKEN
 });
+
 const paymentsApi = squareClient.paymentsApi;
 
 router.post('/', async (req, res) => {
-  const { sourceId } = req.body;
+  const { sourceId, amount } = req.body;
 
   try {
     const paymentResponse = await paymentsApi.createPayment({
       sourceId: sourceId,
-      idempotencyKey: new Date().getTime().toString(), // Unique key for each payment
+      idempotencyKey: crypto.randomBytes(16).toString('hex'),
       amountMoney: {
-        amount: 1000, // The amount of money, in cents (e.g., $10.00 = 1000 cents)
+        amount: amount,
         currency: 'USD'
       },
-      locationId: process.env.SQUARE_LOCATION_ID
     });
-
-    res.json({ message: 'Payment successful!', payment: paymentResponse.result });
+    res.json({ status: paymentResponse.result.payment.status });
   } catch (error) {
+    console.error('Payment error details:', error);
     res.status(500).json({ message: 'Payment failed', error: error.message });
   }
 });
@@ -39,13 +40,26 @@ router.post('/', async (req, res) => {
 /* Saves a payment type and creates a new "customer" in Square CRM */
 router.post('/save', async (req, res) => {
   try {
+    const squareCustomer = await getOrCreateSquareCustomer(req.body, squareClient);
 
+    const paymentData = {
+      payment: {
+        Token: req.body.token,
+        details: req.body.details,
+        type: 'card',
+      },
+      accountId: req.body.accountId,
+      userId: req.body.userId,
+      squareCustomerId: squareCustomer.id,
+      address: squareCustomer.address,
+    };
 
-    const squareAccount = await getOrCreateSquareAccount(req.body, squareClient);
+    const newPayment = await mongoDb.collection('payments').insertOne(paymentData);
+
     // Send a success response back to the frontend
-    res.status(200).json({ message: 'Payment processed successfully.' });
+    res.status(200).json({ message: 'Payment processed successfully.', payment: newPayment });
   } catch (error) {
-    console.error('Error processing payment:', error);
+    console.error('Error saving payment:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
