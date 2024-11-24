@@ -5,6 +5,7 @@ import { Client, Environment } from 'square';
 import bodyParser from 'body-parser';
 import { getOrCreateSquareCustomer } from '../services/square.js';
 import crypto from 'crypto';
+import { fundTransaction } from '../services/transactionManager.js';
 
 const router = express.Router();
 const mongoDb = await connectToDatabase();
@@ -19,9 +20,18 @@ const squareClient = new Client({
 const paymentsApi = squareClient.paymentsApi;
 
 router.post('/', async (req, res) => {
-  const { sourceId, amount } = req.body;
+  const {
+    sourceId,
+    creditCount,
+    accountId,
+    userId,
+    recurrence,
+    amount,
+    squarePaymentId,
+  } = req.body;
 
   try {
+
     const paymentResponse = await paymentsApi.createPayment({
       sourceId: sourceId,
       idempotencyKey: crypto.randomBytes(16).toString('hex'),
@@ -30,7 +40,11 @@ router.post('/', async (req, res) => {
         currency: 'USD'
       },
     });
-    res.json({ status: paymentResponse.result.payment.status });
+
+    const squarePaymentId = paymentResponse.result.payment.id;
+    const fundedAccount = await fundTransaction(accountId, userId, creditCount, amount, 'creditPurchase', squarePaymentId, recurrence);
+
+    res.json({ status: paymentResponse.result.payment.status, squarePaymentId, newCreditBalance: fundedAccount.creditBalance });
   } catch (error) {
     console.error('Payment error details:', error);
     res.status(500).json({ message: 'Payment failed', error: error.message });
