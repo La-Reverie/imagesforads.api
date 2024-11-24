@@ -27,11 +27,13 @@ router.post('/', async (req, res) => {
     userId,
     recurrence,
     amount,
+    isUnlimited,
     squarePaymentId,
+    shouldRenew,
+    planExpiryDate,
   } = req.body;
 
   try {
-
     const paymentResponse = await paymentsApi.createPayment({
       sourceId: sourceId,
       idempotencyKey: crypto.randomBytes(16).toString('hex'),
@@ -42,9 +44,20 @@ router.post('/', async (req, res) => {
     });
 
     const squarePaymentId = paymentResponse.result.payment.id;
-    const fundedAccount = await fundTransaction(accountId, userId, creditCount, amount, 'creditPurchase', squarePaymentId, recurrence);
+    const fundedAccount = await fundTransaction(
+      accountId,
+      userId,
+      creditCount,
+      amount,
+      'creditPurchase',
+      squarePaymentId,
+      recurrence,
+      isUnlimited,
+      shouldRenew,
+      planExpiryDate,
+    );
 
-    res.json({ status: paymentResponse.result.payment.status, squarePaymentId, newCreditBalance: fundedAccount.creditBalance });
+    res.json({ status: paymentResponse.result.payment.status, squarePaymentId, newCreditBalance: fundedAccount.creditBalance, isUnlimited });
   } catch (error) {
     console.error('Payment error details:', error);
     res.status(500).json({ message: 'Payment failed', error: error.message });

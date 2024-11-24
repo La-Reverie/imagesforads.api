@@ -30,7 +30,18 @@ async function debitTransaction(account, userId, positiveAmount, transactionType
   }
 }
 
-async function fundTransaction(accountId, userId, creditCount, amount, transactionType, paymentId, recurrence) {
+async function fundTransaction(
+  accountId,
+  userId,
+  creditCount,
+  amount,
+  transactionType,
+  paymentId,
+  recurrence,
+  shouldRenew,
+  planExpiryDate,
+  isUnlimited,
+) {
   try {
     const timeStampNow = Date.now();
     const account = await mongoDb.collection('accounts').findOne({_id: new ObjectId(accountId)});
@@ -49,6 +60,9 @@ async function fundTransaction(accountId, userId, creditCount, amount, transacti
       paymentId: paymentId || 0, // Square Payment ID
       paymentSource: paymentSource, // Square
       recurrence, // 0, 1, 3
+      shouldRenew,
+      planExpiryDate,
+      isUnlimited,
     };
     await mongoDb.collection('transactions').insertOne(transaction);
     await updateCreditBalance(account._id, account.creditBalance, creditCount);
