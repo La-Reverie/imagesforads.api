@@ -1,5 +1,6 @@
 import connectToDatabase from './MongoConnect.js';
 import { updateCreditBalance } from './accountManager.js';
+import { ObjectId } from 'mongodb';
 
 const mongoDb = await connectToDatabase();
 
@@ -29,23 +30,28 @@ async function debitTransaction(account, userId, positiveAmount, transactionType
   }
 }
 
-async function fundTransaction(account, userId, amount, transactionType) {
+async function fundTransaction(accountId, userId, creditCount, amount, transactionType, paymentId, recurrence) {
   try {
     const timeStampNow = Date.now();
-    const balanceAfterTransaction = account.creditBalance + amount;
+    const account = await mongoDb.collection('accounts').findOne({_id: new ObjectId(accountId)});
+    const balanceAfterTransaction = account.creditBalance + creditCount;
+    const paymentSource = paymentId ? 'square' : 'coupon';
     const transaction = {
       accountId: account._id,
       userId,
-      amount,
+      creditCount,
       balanceAfterTransaction,
+      amountPaid: amount,
       transactionType, // Enum credit_purchase, image_generation, coupon_code, adjustment, accountCreate
       creadtedAt: timeStampNow,
       lastModifiedAt: timeStampNow,
-      notes: 'Initial funding on account create',
-      paymentId: 0,
+      notes: 'API transaction',
+      paymentId: paymentId || 0, // Square Payment ID
+      paymentSource: paymentSource, // Square
+      recurrence, // 0, 1, 3
     };
     await mongoDb.collection('transactions').insertOne(transaction);
-    await updateCreditBalance(account._id, account.creditBalance, amount);
+    await updateCreditBalance(account._id, account.creditBalance, creditCount);
     return await mongoDb.collection('accounts').findOne({_id: account._id});
   } catch (error) {
     console.error('Error funding account:', error.message);
