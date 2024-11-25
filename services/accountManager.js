@@ -2,7 +2,7 @@ import axios from 'axios';
 import connectToDatabase from './MongoConnect.js';
 import { fundTransaction } from './transactionManager.js';
 import { ObjectId } from 'mongodb';
-
+const NEW_USER_CREDITS = 51;
 const mongoDb = await connectToDatabase();
 
 async function getAccountByUserId(userId) {
@@ -23,9 +23,18 @@ async function getAccountByUserId(userId) {
     // if the user does not exist, create a new user and a new account
     else {
       account = await createAccount(userId);
-      const amount = 100;
       const transactionType = 'accountCreate';
-      account = fundTransaction(account, userId, amount, transactionType);
+      account = fundTransaction(
+        account._id,
+        userId,
+        NEW_USER_CREDITS,
+        0,
+        transactionType,
+        0,
+        0,
+        null,
+        false,
+      );
     }
     return account;
   } catch (error) {
