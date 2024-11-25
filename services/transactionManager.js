@@ -25,37 +25,49 @@ async function debitTransaction(account, userId, positiveAmount, transactionType
     account.creditBalance = newBalance;
     return account;
   } catch (error) {
-    console.error('Error debiting account:', error.message);
-    // TODO: handle error
+    throw new Error(`Failed to debit account: ${error.message}`);
   }
 }
 
-async function fundTransaction(accountId, userId, creditCount, amount, transactionType, paymentId, recurrence) {
+async function fundTransaction(
+  accountId,
+  userId,
+  creditCount,
+  amount,
+  transactionType,
+  paymentId,
+  recurrence,
+  shouldRenew,
+  planExpiryDate,
+  isUnlimited,
+) {
   try {
     const timeStampNow = Date.now();
-    const account = await mongoDb.collection('accounts').findOne({_id: new ObjectId(accountId)});
-    const balanceAfterTransaction = account.creditBalance + creditCount;
-    const paymentSource = paymentId ? 'square' : 'coupon';
+    const updatedAccount = await mongoDb.collection('accounts').findOne({_id: new ObjectId(accountId)});
+    const numericCreditCount = Number(creditCount);
+    const balanceAfterTransaction = updatedAccount.creditBalance + numericCreditCount;
     const transaction = {
-      accountId: account._id,
+      accountId: updatedAccount._id,
       userId,
-      creditCount,
+      creditCount: numericCreditCount,
       balanceAfterTransaction,
-      amountPaid: amount,
-      transactionType, // Enum credit_purchase, image_generation, coupon_code, adjustment, accountCreate
-      creadtedAt: timeStampNow,
+      amountPaid: Number(amount),
+      transactionType,
+      createdAt: timeStampNow,
       lastModifiedAt: timeStampNow,
       notes: 'API transaction',
-      paymentId: paymentId || 0, // Square Payment ID
-      paymentSource: paymentSource, // Square
-      recurrence, // 0, 1, 3
+      paymentId: paymentId || 0,
+      paymentSource: paymentId ? 'square' : 'coupon',
+      recurrence: Number(recurrence),
+      shouldRenew: Boolean(shouldRenew),
+      planExpiryDate: planExpiryDate ? new Date(planExpiryDate) : null,
+      isUnlimited: Boolean(isUnlimited),
     };
     await mongoDb.collection('transactions').insertOne(transaction);
-    await updateCreditBalance(account._id, account.creditBalance, creditCount);
-    return await mongoDb.collection('accounts').findOne({_id: account._id});
+    await updateCreditBalance(updatedAccount._id, updatedAccount.creditBalance, numericCreditCount);
+    return await mongoDb.collection('accounts').findOne({_id: updatedAccount._id});
   } catch (error) {
-    console.error('Error funding account:', error.message);
-    // TODO: handle error
+    throw new Error(`Failed to fund account: ${error.message}`);
   }
 }
 

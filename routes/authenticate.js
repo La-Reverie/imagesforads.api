@@ -7,7 +7,6 @@ import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 const mongoDb = await connectToDatabase();
-const NEW_USER_CREDITS = 50;
 
 router.post('/', async (req, res) => {
   try {
