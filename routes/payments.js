@@ -6,6 +6,8 @@ import bodyParser from 'body-parser';
 import { getOrCreateSquareCustomer } from '../services/square.js';
 import crypto from 'crypto';
 import { fundTransaction } from '../services/transactionManager.js';
+import { ObjectId } from 'mongodb';
+import { getCreditsFromCode, redeemCode } from '../services/redeem.js';
 
 const router = express.Router();
 const mongoDb = await connectToDatabase();
@@ -88,6 +90,55 @@ router.post('/save', async (req, res) => {
   } catch (error) {
     console.error('Error saving payment:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+/* Redeems a code for credits */
+router.post('/redeem', async (req, res) => {
+  try {
+    const { couponCode, userId, accountId } = req.body;
+
+    // Validate required fields
+    if (!couponCode || !userId || !accountId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Verify user exists and owns the account
+    const user = await mongoDb.collection('users').findOne({ _id: new ObjectId(userId) });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const account = await mongoDb.collection('accounts').findOne({ 
+      _id: new ObjectId(accountId),
+      ownerId: new ObjectId(userId)
+    });
+    if (!account) {
+      return res.status(404).json({ error: 'Account not found or user is not an owner' });
+    }
+
+    // Get credits from code
+    const { creditValue, error } = await getCreditsFromCode(couponCode);
+    if (error) {
+      return res.status(400).json({ error: error });
+    }
+
+    // Mark the code as redeemed
+    const { success, newCreditBalance } = await redeemCode(couponCode, accountId, userId, creditValue);
+
+    if (!success) {
+      return res.status(400).json({ error: 'Code redemption failed' });
+    }
+
+    res.json({
+      message: 'Code redeemed successfully',
+      newCreditBalance,
+      codeCreditValue: creditValue,
+    });
+
+  } catch (error) {
+    console.error('Code redemption error:', error);
+    res.status(500).json({ error: 'Code redemption failed' });
   }
 });
 
