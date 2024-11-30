@@ -18,7 +18,14 @@ const openai = new OpenAI({
 
 const CREDITS_PER_FEEDBACK = 50;
 
-const generateValidationPrompt = (userFeedback) => {
+const generateValidationPrompt = (userFeedback, existingValidFeedback) => {
+  let validFeedbackString = '';
+  if (existingValidFeedback.length > 0) {
+    validFeedbackString = 'This is the existing valid feedback already submitted by the user before now. Please also make sure that the current feedback unique from the existing valid feedback.\n\n';
+    existingValidFeedback.forEach((feedback, i) => {
+      validFeedbackString += `${i + 1}. ${feedback.userFeedback}\n`;
+    });
+  }
   return `My web app, ImagesForAds.Ai, generates images for advertisers to use in their online image ads.
           We are currently in the beta round, and the most important aspect of this round is user feedback.
           We have a feedback form where users enter their feedback, and upon approval, we give them 50
@@ -26,7 +33,7 @@ const generateValidationPrompt = (userFeedback) => {
           entered onto this form is valid feedback. If the feedback is gibberish, obviously the answer is
           false. If the feedback is a proper sentence but not related to the product, again the answer is
           false. If the feedback appears to be an honest attempt at helping us improve our features, the
-          answer is true. Below is the feedback from the user.
+          answer is true.${validFeedbackString}
 
           Validate the feedback and respond with a valid JSON object only. Do not include any backticks,
           formatting, or additional text. For example:
@@ -40,7 +47,6 @@ const generateValidationPrompt = (userFeedback) => {
           value short and concise. Here's the user's input: ${userFeedback}`;
 };
 
-// POST - Create new feedback
 router.post('/', async (req, res) => {
   try {
     const { userId, accountId, userFeedback } = req.body;
@@ -48,7 +54,26 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const feedbackJson = await validateFeedback(userFeedback);
+    const existingValidFeedback = await mongoDb.collection('feedback').find({
+      userId: new ObjectId(userId),
+      'feedbackResponse.isValid': true
+    }).toArray();
+
+    const existingInvalidFeedback = await mongoDb.collection('feedback').find({
+      userId: new ObjectId(userId),
+      'feedbackResponse.isValid': false
+    }).toArray();
+
+
+    if (existingInvalidFeedback.length >= 10) {
+      return res.status(400).json({ errorTitle: 'Notice', error: 'You have submitted 10 invalid feedbacks. Please contact us directly at feedback@imagesforads.ai if you would like to continue submitting feedback.' });
+    }
+
+    if (existingValidFeedback.length >= 20) {
+      return res.status(400).json({ errorTitle: 'Notice', error: 'Wow! You have submitted 20 valid feedbacks already! You are amazing! Please contact us directly at feedback@imagesforads.ai' });
+    }
+
+    const feedbackJson = await validateFeedback(userFeedback, existingValidFeedback);
     const feedbackResponse = await JSON.parse(feedbackJson);
 
     await mongoDb.collection('feedback').insertOne({
@@ -89,8 +114,9 @@ router.post('/', async (req, res) => {
   }
 });
 
-const validateFeedback = async (userFeedback) => {
-  const textPrompt = generateValidationPrompt(userFeedback);
+const validateFeedback = async (userFeedback, existingValidFeedback) => {
+  const textPrompt = generateValidationPrompt(userFeedback, existingValidFeedback);
+  console.log('textPrompt', textPrompt);
   console.log('validating feedback');
   const conceptResponse = await openai.chat.completions.create({
     messages: [{ role: "user", content: textPrompt }],
