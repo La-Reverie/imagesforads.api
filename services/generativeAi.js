@@ -19,7 +19,7 @@ const generateImageConcept = async (req) => {
   console.log('generating image concept');
   const conceptResponse = await openai.chat.completions.create({
     messages: [{ role: "user", content: textPrompt }],
-    model: "gpt-3.5-turbo",
+    model: "gpt-4o",
     // model: "gpt-4-1106-preview",
   });
   return conceptResponse.choices[0].message.content
