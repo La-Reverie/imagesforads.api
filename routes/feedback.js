@@ -89,7 +89,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-
 const validateFeedback = async (userFeedback) => {
   const textPrompt = generateValidationPrompt(userFeedback);
   console.log('validating feedback');
