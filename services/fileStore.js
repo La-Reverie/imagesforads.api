@@ -24,6 +24,7 @@ async function uploadToCDN(imageUrl, req) {
     });
 
     const currentUserObj = await JSON.parse(req.body.currentUser);
+    const account = await JSON.parse(req.body.account);
     const fileName = getFileName(currentUserObj, extension);
     // Step 2: Upload the image directly to BunnyCDN
     const uploadResponse = await axios.put(`${CDN_STORAGE_URL}/${fileName}`, response.data, {
@@ -43,7 +44,8 @@ async function uploadToCDN(imageUrl, req) {
       fileName: fileName,
       mimeType: mimeType,
       ext: extension,
-      owner: currentUserObj._id,
+      userId: currentUserObj._id,
+      accountId: account._id,
       createdAt: Date.now(),
     };
 

@@ -65,8 +65,8 @@ router.post('/', async (req, res) => {
     }).toArray();
 
 
-    if (existingInvalidFeedback.length >= 10) {
-      return res.status(400).json({ errorTitle: 'Notice', error: 'You have submitted 10 invalid feedbacks. Please contact us directly at feedback@imagesforads.ai if you would like to continue submitting feedback.' });
+    if (existingInvalidFeedback.length >= 20) {
+      return res.status(400).json({ errorTitle: 'Notice', error: 'You have submitted 20 invalid feedbacks. Please contact us directly at feedback@imagesforads.ai if you would like to continue submitting feedback.' });
     }
 
     if (existingValidFeedback.length >= 20) {

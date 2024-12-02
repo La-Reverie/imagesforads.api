@@ -94,7 +94,7 @@ router.post('/save', async (req, res) => {
 });
 
 /* Redeems a code for credits */
-router.post('/redeem', async (req, res) => {
+router.post('/redeem', authenticateToken, async (req, res) => {
   try {
     const { couponCode, userId, accountId } = req.body;
 
