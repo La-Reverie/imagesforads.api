@@ -6,7 +6,8 @@ const mongoDb = await connectToDatabase();
 
 // Storage and CDN info
 const STORAGE_ZONE = 'images-for-ads-ai';
-const FILE_SAVE_PATH = 'generated-images';
+const FILE_SAVE_PATH_PREFIX = process.env.NODE_ENV === 'DEV' ? 'test/' : '';
+const FILE_SAVE_PATH = `${FILE_SAVE_PATH_PREFIX}generated-images`;
 const CDN_API_KEY = process.env.BUNNYCDN_APY_KEY;
 const CDN_STORAGE_URL = `https://storage.bunnycdn.com/${STORAGE_ZONE}/${FILE_SAVE_PATH}`;
 const CDN_BASE_PATH = 'https://cdn.forads.ai/generated-images';
