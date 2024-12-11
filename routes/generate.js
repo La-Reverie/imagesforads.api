@@ -178,6 +178,8 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
     const generatedImages = responseData.data; 
     if (generatedImages && generatedImages.length > 0) {
       const imageUrl = generatedImages[0].url;
+      const imageInfo = await uploadToCDN(generatedImages[0].url, req);
+      console.log('Image info:', imageInfo);
       res.json({ images: [{ url: imageUrl }] });
     } else {
       res.status(500).json({ error: 'No images returned from OpenAI API.' });
