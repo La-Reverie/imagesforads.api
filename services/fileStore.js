@@ -6,10 +6,11 @@ const mongoDb = await connectToDatabase();
 
 // Storage and CDN info
 const STORAGE_ZONE = 'images-for-ads-ai';
-const FILE_SAVE_PATH = 'generated-images';
+const FILE_SAVE_PATH_PREFIX = process.env.NODE_ENV === 'DEV' ? 'test/' : '';
+const FILE_SAVE_PATH = `${FILE_SAVE_PATH_PREFIX}generated-images`;
 const CDN_API_KEY = process.env.BUNNYCDN_APY_KEY;
 const CDN_STORAGE_URL = `https://storage.bunnycdn.com/${STORAGE_ZONE}/${FILE_SAVE_PATH}`;
-const CDN_BASE_PATH = 'https://cdn.forads.ai/generated-images';
+const CDN_BASE_PATH = `https://cdn.forads.ai/${FILE_SAVE_PATH_PREFIX}generated-images`;
 
 async function uploadToCDN(imageUrl, req) {
   try {
@@ -24,6 +25,7 @@ async function uploadToCDN(imageUrl, req) {
     });
 
     const currentUserObj = await JSON.parse(req.body.currentUser);
+    const account = await JSON.parse(req.body.account);
     const fileName = getFileName(currentUserObj, extension);
     // Step 2: Upload the image directly to BunnyCDN
     const uploadResponse = await axios.put(`${CDN_STORAGE_URL}/${fileName}`, response.data, {
@@ -43,7 +45,8 @@ async function uploadToCDN(imageUrl, req) {
       fileName: fileName,
       mimeType: mimeType,
       ext: extension,
-      owner: currentUserObj._id,
+      userId: currentUserObj._id,
+      accountId: account._id,
       createdAt: Date.now(),
     };
 
@@ -61,7 +64,7 @@ function getFileName (currentUserObj, extension) {
   return `${currentUserObj._id}_${Date.now()}_${Math.floor(Math.random() * 99999999)}.${extension}`;
 }
 
-async function saveFileInfo(imageInfo, req) {
+async function saveFileInfo(imageInfo) {
   try {
     return await mongoDb.collection('images').insertOne(imageInfo);
   }

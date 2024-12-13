@@ -7,8 +7,7 @@ import { uploadToCDN } from '../services/fileStore.js';
 import multer from 'multer'; 
 import FormData from 'form-data'; 
 import axios from 'axios'; 
-
-
+import { combinePrompts } from '../services/generativeAi.js';
 import { getCreditBalance } from '../services/accountManager.js';
 import { debitTransaction } from '../services/transactionManager.js';
 
@@ -79,6 +78,7 @@ router.post('/', async (req, res) => {
       imageUrl: imageInfo.publicUrl,
       imageId: imageInfo._id,
       account: updatedAccount,
+      originalConceptPrompt: conceptPrompt,
     });
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
@@ -93,7 +93,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-
 /**
  * POST /inpaint
  * This one sends the images to OPENAI Dall-E-2
@@ -102,48 +101,56 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
   console.log('Inpainting request received');
 
   try {
-    const { prompt, n } = req.body;
-
-    // Validación básica
-    // we check if we have the image and the mask
-    if (!req.files || !req.files['image'] || !req.files['mask']) {
-      console.error('Missing files:', req.files);
-      return res.status(400).json({ error: 'Image and mask files are required.' });
-    }
-
-    if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required.' });
-    }
-
-    // Obtener los buffers de las imágenes
+    const { prompt, n, originalConceptPrompt } = req.body;
+    let sizeFromImage;
+    
+    // Combine the prompts
+    const combinedPrompt = await combinePrompts(prompt, originalConceptPrompt);
+    console.log('Combined prompt result:', combinedPrompt);
+    
+    // Add more detailed logging
+    console.log('Processing image buffers...');
     const imageBuffer = req.files['image'][0].buffer;
     const maskBuffer = req.files['mask'][0].buffer;
+    console.log('Image buffers processed successfully');
 
-    // Función para obtener las dimensiones de una imagen PNG
-    function getImageDimensions(buffer) {
-      // Leemos el ancho y alto desde el chunk IHDR del PNG
-      const width = buffer.readUInt32BE(16);
-      const height = buffer.readUInt32BE(20);
-      return { width, height };
+    // Add try-catch around dimension checking
+    try {
+      console.log('Checking image dimensions...');
+      const imageDimensions = getImageDimensions(imageBuffer);
+      console.log('Image dimensions:', imageDimensions);
+
+      function getImageDimensions(buffer) {
+        // Leemos el ancho y alto desde el chunk IHDR del PNG
+        const width = buffer.readUInt32BE(16);
+        const height = buffer.readUInt32BE(20);
+        return { width, height };
+      }
+
+      const allowedSizes = ['256x256', '512x512', '1024x1024'];
+      sizeFromImage = `${imageDimensions.width}x${imageDimensions.height}`;
+
+      if (!allowedSizes.includes(sizeFromImage)) {
+        return res.status(400).json({
+          error: `Invalid image size ${sizeFromImage}. Allowed sizes are ${allowedSizes.join(', ')}.`,
+        });
+      }
+    } catch (dimError) {
+      console.error('Error processing image dimensions:', dimError);
+      return res.status(400).json({ error: 'Invalid image format or corrupted file' });
     }
 
-    // Obtener dimensiones de la imagen
-    const imageDimensions = getImageDimensions(imageBuffer);
-
-    // This is from OPENAI, these are the image sizes they allow
-    const allowedSizes = ['256x256', '512x512', '1024x1024'];
-    const sizeFromImage = `${imageDimensions.width}x${imageDimensions.height}`;
-
-    if (!allowedSizes.includes(sizeFromImage)) {
-      return res.status(400).json({
-        error: `Invalid image size ${sizeFromImage}. Allowed sizes are ${allowedSizes.join(', ')}.`,
-      });
-    }
-
-
-
-    // We create the FormData instance
-    const formData = new FormData();
+    // Now sizeFromImage is accessible here
+    console.log('Preparing OpenAI API call...');
+    // const openAiResponse = await openai.images.edit({
+    //   image: imageBuffer,
+    //   mask: maskBuffer,
+    //   prompt: combinedPrompt,
+    //   n: parseInt(n) || 1, // Ensure n is a number
+    //   size: sizeFromImage,
+    // });
+        // We create the FormData instance
+        const formData = new FormData();
 
     // Then we add the images to the buffer
     formData.append('image', imageBuffer, 'image.png');
@@ -154,15 +161,16 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
     formData.append('n', n || '1');
     formData.append('size', sizeFromImage);
 
-    // We send the request and await for the response
-    const openaiResponse = await axios.post('https://api.openai.com/v1/images/edits', formData, {
+        // We send the request and await for the response
+    const openAiResponse = await axios.post('https://api.openai.com/v1/images/edits', formData, {
       headers: {
         'Authorization': `Bearer ${OPEN_API_KEY}`,
         ...formData.getHeaders(),
       },
     });
+    console.log('OpenAI API call completed');
 
-    const responseData = openaiResponse.data;
+    const responseData = openAiResponse.data;
 
     console.log('OpenAI response:', responseData);
 
@@ -170,6 +178,8 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
     const generatedImages = responseData.data; 
     if (generatedImages && generatedImages.length > 0) {
       const imageUrl = generatedImages[0].url;
+      const imageInfo = await uploadToCDN(generatedImages[0].url, req);
+      console.log('Image info:', imageInfo);
       res.json({ images: [{ url: imageUrl }] });
     } else {
       res.status(500).json({ error: 'No images returned from OpenAI API.' });
