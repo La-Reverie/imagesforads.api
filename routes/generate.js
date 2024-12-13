@@ -176,11 +176,25 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
 
     // We get the image back and store it here
     const generatedImages = responseData.data; 
+    console.log('Generated images:', generatedImages); // Agrega este log
+
     if (generatedImages && generatedImages.length > 0) {
+
       const imageUrl = generatedImages[0].url;
-      const imageInfo = await uploadToCDN(generatedImages[0].url, req);
-      console.log('Image info:', imageInfo);
-      res.json({ images: [{ url: imageUrl }] });
+      console.log('Attempting to upload to BunnyCDN with URL:', imageUrl);
+
+      try {
+        const imageInfo = await uploadToCDN(imageUrl, req);
+        if (!imageInfo) {
+          throw new Error('Upload to BunnyCDN failed, no imageInfo returned');
+        }
+
+        console.log('Image uploaded successfully to BunnyCDN:', imageInfo);
+        res.json({ images: [{ url: imageInfo.publicUrl }] }); // we send the public url instead
+      } catch (uploadError) {
+        console.error('Error uploading image to BunnyCDN:', uploadError.message);
+        res.status(500).json({ error: 'Failed to upload image to BunnyCDN.' });
+      }
     } else {
       res.status(500).json({ error: 'No images returned from OpenAI API.' });
     }
