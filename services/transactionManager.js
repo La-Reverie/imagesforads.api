@@ -1,16 +1,20 @@
 import connectToDatabase from './MongoConnect.js';
 import { updateCreditBalance } from './accountManager.js';
 import { ObjectId } from 'mongodb';
+import { getAccountById } from './accountManager.js';
 
 const mongoDb = await connectToDatabase();
 
-async function debitTransaction(account, userId, positiveAmount, transactionType) {
+async function debitTransaction(accountId, userId, positiveAmount, transactionType) {
   const amount = positiveAmount * -1;
+  console.log('!!amount!!', amount);
   try {
     const timeStampNow = Date.now();
+    const account = await getAccountById(accountId);
+    console.log('BALANCE BEFORE TRANSACTION', account.creditBalance);
     const balanceAfterTransaction = account.creditBalance + amount;
     const transaction = {
-      accountId: account._id,
+      accountId,
       userId,
       amount,
       balanceAfterTransaction,
@@ -21,7 +25,8 @@ async function debitTransaction(account, userId, positiveAmount, transactionType
       paymentId: 0,
     };
     await mongoDb.collection('transactions').insertOne(transaction);
-    const newBalance = await updateCreditBalance(account._id, account.creditBalance, amount);
+    const newBalance = await updateCreditBalance(accountId, account.creditBalance, amount);
+    console.log('!!newBalance!!', newBalance);
     account.creditBalance = newBalance;
     return account;
   } catch (error) {

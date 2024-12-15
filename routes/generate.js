@@ -17,6 +17,7 @@ const OPEN_API_KEY = process.env.OPENAI_API_KEY;
 const mongoDb = await connectToDatabase();
 
 const CREDITS_TO_GENERATE_IMAGE = 5;
+const CREDITS_TO_INPAINT_IMAGE = 3;
 
 const openai = new OpenAI({
   apiKey: OPEN_API_KEY,
@@ -51,10 +52,9 @@ router.use(authenticateToken);
 router.post('/', async (req, res) => {
   try {
     console.log('Generate');
-    const account = JSON.parse(req.body.account);
-    const currentUser = JSON.parse(req.body.currentUser);
+    const { accountId, currentUserId } = req.body;
     // check credits
-    const creditBalance = await getCreditBalance(account._id);
+    const creditBalance = await getCreditBalance(accountId);
     if (creditBalance < CREDITS_TO_GENERATE_IMAGE) {
       // TODO inform frontend that credit balance is low
       const errorCode = 'LOW_CREDIT_BALANCE';
@@ -72,13 +72,15 @@ router.post('/', async (req, res) => {
     const imageInfo = await uploadToCDN(generatedImageResponse.data[0].url, req);
     const submission = await saveSubmission(imageInfo, conceptPrompt, req);
     // debit credits
-    const updatedAccount = await debitTransaction(account, currentUser._id, CREDITS_TO_GENERATE_IMAGE, 'image_generation');
+    const updatedAccount = await debitTransaction(accountId, currentUserId, CREDITS_TO_GENERATE_IMAGE, 'image_generation');
+    console.log('updatedAccount!!!!!!!!!!!!', updatedAccount);
     res.send({
       submissionId: submission.insertedId,
       imageUrl: imageInfo.publicUrl,
       imageId: imageInfo._id,
       account: updatedAccount,
       originalConceptPrompt: conceptPrompt,
+      newCreditBalance: updatedAccount.creditBalance,
     });
   } catch (error) {
     console.error("Error calling OpenAI API:", error);
@@ -99,9 +101,25 @@ router.post('/', async (req, res) => {
  */
 router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), async (req, res) => {
   console.log('Inpainting request received');
+  console.log('req.body.account', req.body.account);
+  const account = await JSON.parse(req.body.account);
 
   try {
     const { prompt, n, originalConceptPrompt } = req.body;
+    // check credits
+    const creditBalance = await getCreditBalance(account._id);
+    if (creditBalance < CREDITS_TO_INPAINT_IMAGE) {
+      // TODO inform frontend that credit balance is low
+      const errorCode = 'LOW_CREDIT_BALANCE';
+      const errorMessage = 'Your credit balance is low! Please add credits to continue.';
+      // Send a structured error response
+      res.status(500).json({
+        isError: true,
+        code: errorCode,
+        message: errorMessage
+      });
+      return false;
+    }
     let sizeFromImage;
     
     // Combine the prompts
@@ -190,6 +208,12 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
         }
 
         console.log('Image uploaded successfully to BunnyCDN:', imageInfo);
+        // const currentUser = await JSON.parse(req.body.currentUser);
+        // const updatedAccount = await debitTransaction(account, currentUser._id, CREDITS_TO_INPAINT_IMAGE, 'image_inpaint');
+        // console.log('updatedAccount!!!!!!!!!!!!', updatedAccount);
+        // res.json({
+        //   images: [{ url: imageInfo.publicUrl }],
+        //   newCreditBalance: updatedAccount.creditBalance,
         res.json({ images: [{ url: imageInfo.publicUrl }] }); // we send the public url instead
       } catch (uploadError) {
         console.error('Error uploading image to BunnyCDN:', uploadError.message);
