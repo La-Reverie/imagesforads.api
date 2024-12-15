@@ -11,6 +11,8 @@ import connectToDatabase from './services/MongoConnect.js';
 import { ObjectId } from 'mongodb';
 import { authenticateToken } from './services/authMiddleware.js';
 import feedbackRouter from './routes/feedback.js';
+import { getAccountById } from './services/accountManager.js';
+
 dotenv.config();
 
 const app = express();
@@ -58,6 +60,17 @@ app.post('/api/get-images', authenticateToken, async (req, res) => {
     res.send({ success: true, images });
   } catch (error) {
     console.error('Error fetching images:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+app.post('/api/getCreditBalance', authenticateToken, async (req, res) => {
+  try {
+    const accountId = req.body.accountId;
+    const account = await getAccountById(accountId);
+    res.send({ success: true, creditBalance: account.creditBalance });
+  } catch (error) {
+    console.error('Error fetching credit balance:', error);
     res.status(500).send('Internal Server Error');
   }
 });

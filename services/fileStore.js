@@ -1,7 +1,8 @@
 import axios from "axios";
 import mimeTypes from "mime-types";
 import connectToDatabase from "./MongoConnect.js";
-
+import { getUserById } from "./userManager.js";
+import { getAccountById } from "./accountManager.js";
 const mongoDb = await connectToDatabase();
 
 // Storage and CDN info
@@ -31,10 +32,13 @@ async function uploadToCDN(imageUrl, req) {
       method: "GET",
       responseType: "stream",
     });
-
-    const currentUserObj = await JSON.parse(req.body.currentUser);
-    const account = await JSON.parse(req.body.account);
+console.log('########################### 1 ############################################');
+    const currentUserObj = await getUserById(req.body.currentUserId);
+    console.log('########################### 2 ############################################');
+    const account = await getAccountById(req.body.accountId);
+    console.log('########################### 3 ############################################');
     const fileName = getFileName(currentUserObj, extension);
+    console.log('########################### 4 ############################################');
     // Step 2: Upload the image directly to BunnyCDN
     const uploadResponse = await axios.put(
       `${CDN_STORAGE_URL}/${fileName}`,
@@ -48,7 +52,7 @@ async function uploadToCDN(imageUrl, req) {
         maxBodyLength: Infinity,
       }
     );
-
+console.log('########################### 5 ############################################');
     console.log("▦ 🐇 ------> BunnyCDN response status:", uploadResponse.status);
     console.log("▦ 🐇 ------> BunnyCDN response data:", uploadResponse.data);
 

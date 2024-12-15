@@ -2,6 +2,7 @@ import axios from 'axios';
 import connectToDatabase from './MongoConnect.js';
 import { fundTransaction } from './transactionManager.js';
 import { ObjectId } from 'mongodb';
+
 const NEW_USER_CREDITS = 51;
 const mongoDb = await connectToDatabase();
 
@@ -35,6 +36,27 @@ async function getAccountByUserId(userId) {
         null,
         false,
       );
+    }
+    return account;
+  } catch (error) {
+    console.error('Error getting account:', error.message);
+  }
+}
+
+async function getAccountById(accountId) {
+  const timeStampNow = Date.now();
+  try {
+    // Check if user exists in the database
+    const existingAccount = await mongoDb.collection('accounts').findOne({_id: new ObjectId(accountId)});
+    let account = false;
+    // if the account exists, update the lastModifiedAt field in the database
+    if (!!existingAccount) {
+        account = {
+          ...existingAccount,
+          lastModifiedAt: timeStampNow,
+        };
+        const response = await mongoDb.collection('accounts').updateOne({_id: new ObjectId(accountId)}, {$set: {lastModifiedAt: timeStampNow}});
+        console.log("Account updated: ", response);
     }
     return account;
   } catch (error) {
@@ -89,8 +111,9 @@ async function verifyCreditBalance(accountId, currentCreditBalance) {
 }
 
 async function getCreditBalance(accountId) {
+  console.log('getCreditBalance', accountId);
   const account = await mongoDb.collection('accounts').findOne({_id: new ObjectId(accountId)});
   return account.creditBalance;
 }
 
-export { createAccount, getAccountByUserId, updateCreditBalance, getCreditBalance};
+export { createAccount, getAccountByUserId, getAccountById, updateCreditBalance, getCreditBalance};
