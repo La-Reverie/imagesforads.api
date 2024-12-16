@@ -1,4 +1,5 @@
 import express from 'express';
+import bodyParser from 'body-parser';
 import connectToDatabase from '../services/MongoConnect.js';
 import OpenAI from 'openai';
 import { authenticateToken } from '../services/authMiddleware.js';
