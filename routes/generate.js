@@ -11,7 +11,7 @@ import axios from 'axios';
 import { combinePrompts } from '../services/generativeAi.js';
 import { getCreditBalance } from '../services/accountManager.js';
 import { debitTransaction } from '../services/transactionManager.js';
-
+import { getAccountById } from '../services/accountManager.js';
 
 const router = express.Router();
 const OPEN_API_KEY = process.env.OPENAI_API_KEY;
@@ -109,8 +109,9 @@ router.post('/', async (req, res) => {
  */
 router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), async (req, res) => {
   console.log('Inpainting request received');
-  console.log('req.body.account', req.body.account);
-  const account = await JSON.parse(req.body.account);
+  const { accountId, currentUserId } = req.body;
+  const account = await getAccountById(accountId);
+  console.log('$$$$$$account$$$$$$', account);
 
   try {
     const { prompt, n, originalConceptPrompt } = req.body;
@@ -217,12 +218,13 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
 
         console.log('Image uploaded successfully to BunnyCDN:', imageInfo);
         // const currentUser = await JSON.parse(req.body.currentUser);
-        // const updatedAccount = await debitTransaction(account, currentUser._id, CREDITS_TO_INPAINT_IMAGE, 'image_inpaint');
-        // console.log('updatedAccount!!!!!!!!!!!!', updatedAccount);
-        // res.json({
-        //   images: [{ url: imageInfo.publicUrl }],
-        //   newCreditBalance: updatedAccount.creditBalance,
-        res.json({ images: [{ url: imageInfo.publicUrl }] }); // we send the public url instead
+        const updatedAccount = await debitTransaction(accountId, currentUserId, CREDITS_TO_INPAINT_IMAGE, 'image_inpaint');
+        console.log('updatedAccount!!!!!!!!!!!!', updatedAccount);
+        res.json({
+          images: [{ url: imageInfo.publicUrl }],
+          newCreditBalance: updatedAccount.creditBalance,
+        });
+        // res.json({ images: [{ url: imageInfo.publicUrl }] });
       } catch (uploadError) {
         console.error('Error uploading image to BunnyCDN:', uploadError.message);
         res.status(500).json({ error: 'Failed to upload image to BunnyCDN.' });
