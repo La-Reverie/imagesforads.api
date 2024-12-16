@@ -12,6 +12,7 @@ import { ObjectId } from 'mongodb';
 import { authenticateToken } from './services/authMiddleware.js';
 import feedbackRouter from './routes/feedback.js';
 import { getAccountById } from './services/accountManager.js';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -74,5 +75,30 @@ app.post('/api/getCreditBalance', authenticateToken, async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
+app.get("/api/proxy-image", async (req, res) => {
+  const { url } = req.query;
+  const referrerUrl = process.env.NODE_ENV === 'DEV'
+    ? 'http://localhost:3001'
+    : process.env.PRODUCTION_URL ;
+
+  try {
+    const response = await axios.get(url, {
+      responseType: "arraybuffer",
+      headers: {
+        "User-Agent": "YourCustomAgent/1.0",
+        Referer: referrerUrl,
+      },
+    });
+
+    res.setHeader("Content-Type", response.headers["content-type"]);
+    res.setHeader("Content-Disposition", `attachment; filename="ad-image.png"`);
+    res.send(response.data);
+  } catch (error) {
+    console.error("Error fetching image from Bunny.net", error.message);
+    res.status(error.response?.status || 500).send("Failed to fetch image");
+  }
+});
+
 
 export default app;
