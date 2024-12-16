@@ -12,7 +12,10 @@ import { ObjectId } from 'mongodb';
 import { authenticateToken } from './services/authMiddleware.js';
 import feedbackRouter from './routes/feedback.js';
 import { getAccountById } from './services/accountManager.js';
+<<<<<<< HEAD
 import axios from 'axios';
+=======
+>>>>>>> main
 
 dotenv.config();
 
