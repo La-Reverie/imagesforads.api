@@ -76,7 +76,7 @@ app.post('/api/getCreditBalance', authenticateToken, async (req, res) => {
   }
 });
 
-app.get("/api/proxy-image", async (req, res) => {
+app.get("/api/proxy-image", authenticateToken, async (req, res) => {
   const { url } = req.query;
   const referrerUrl = process.env.NODE_ENV === 'DEV'
     ? 'http://localhost:3001'
