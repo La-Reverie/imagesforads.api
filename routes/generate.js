@@ -19,6 +19,13 @@ const mongoDb = await connectToDatabase();
 const CREDITS_TO_GENERATE_IMAGE = 5;
 const CREDITS_TO_INPAINT_IMAGE = 3;
 
+// Increase payload size limits
+app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.urlencoded({
+  limit: '50mb',
+  extended: true
+}));
+
 const openai = new OpenAI({
   apiKey: OPEN_API_KEY,
 });
