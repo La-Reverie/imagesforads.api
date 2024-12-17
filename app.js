@@ -13,6 +13,7 @@ import { authenticateToken } from './services/authMiddleware.js';
 import feedbackRouter from './routes/feedback.js';
 import { getAccountById } from './services/accountManager.js';
 import axios from 'axios';
+import { getUserById } from './services/userManager.js';
 
 dotenv.config();
 
@@ -33,21 +34,31 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/feedback', feedbackRouter);
 
 app.post('/api/subscribe', authenticateToken, async (req, res) => {
-  const user = await JSON.parse(req.body.currentUser);
+  const userId = new ObjectId(req.body.currentUserId);
+  const broadcastId = req.body.broadcastId;
+
   try {
-    const existingUser = await mongoDb.collection('users').findOne({_id: new ObjectId(user._id)});
+    const existingUser = await getUserById(userId);
     if (!existingUser) {
       return res.status(404).send('User not found');
+    }
+    const existingSubscription = await mongoDb.collection('subscriptions').findOne({
+      owner: userId,
+      broadcast: broadcastId
+    });
+
+    if (existingSubscription) {
+      return res.send({ success: true, message: '🎉 You\'re already part of the club!' });
     }
 
     const subscribed = await mongoDb.collection('subscriptions').insertOne({
       email: existingUser.email,
       createdAt: Date.now(),
-      broadcast: new ObjectId('67009bb6561716ca36c62d69'),
-      owner: new ObjectId(user._id),
+      broadcast: broadcastId,
+      owner: userId,
     });
 
-    res.send({ success: true });
+    res.send({ success: true, message: '🎉 You\'re now part of the club!' });
   } catch (error) {
     console.error('Error subscribing:', error);
     res.status(500).send('Internal Server Error');
