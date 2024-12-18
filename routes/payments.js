@@ -14,8 +14,9 @@ const mongoDb = await connectToDatabase();
 router.use(authenticateToken);
 router.use(bodyParser.json());
 
+const squareEnvironment = process.env.NODE_ENV === 'DEV' ? Environment.Sandbox : Environment.Production;
 const squareClient = new Client({
-  environment: Environment.Sandbox, // Change to Environment.Production in production
+  environment: squareEnvironment,
   accessToken: process.env.SQUARE_ACCESS_TOKEN
 });
 
