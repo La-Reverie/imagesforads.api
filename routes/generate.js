@@ -36,8 +36,9 @@ async function saveSubmission(imageInfo, conceptPrompt, req) {
   console.log('saving submission');
   const submissionInfo = {
     userInput: req.body.userInput,
-    owner: imageInfo._id,
-    absoluteFilePath: imageInfo.absoluteFilePath,
+    owner: imageInfo.userId,
+    originalUrl: imageInfo.originalUrl,
+    publicUrl: imageInfo.publicUrl,
     conceptPrompt,
     createdAt: Date.now(),
   };
@@ -81,11 +82,10 @@ router.post('/', async (req, res) => {
     const submission = await saveSubmission(imageInfo, conceptPrompt, req);
     // debit credits
     const updatedAccount = await debitTransaction(accountId, currentUserId, CREDITS_TO_GENERATE_IMAGE, 'image_generation');
-    console.log('updatedAccount!!!!!!!!!!!!', updatedAccount);
     res.send({
       submissionId: submission.insertedId,
       imageUrl: imageInfo.publicUrl,
-      imageId: imageInfo._id,
+      imageId: imageInfo.imageId,
       account: updatedAccount,
       originalConceptPrompt: conceptPrompt,
       newCreditBalance: updatedAccount.creditBalance,
@@ -111,7 +111,6 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
   console.log('Inpainting request received');
   const { accountId, currentUserId } = req.body;
   const account = await getAccountById(accountId);
-  console.log('$$$$$$account$$$$$$', account);
 
   try {
     const { prompt, n, originalConceptPrompt } = req.body;
@@ -219,7 +218,6 @@ router.post('/inpaint', upload.fields([{ name: 'image' }, { name: 'mask' }]), as
         console.log('Image uploaded successfully to BunnyCDN:', imageInfo);
         // const currentUser = await JSON.parse(req.body.currentUser);
         const updatedAccount = await debitTransaction(accountId, currentUserId, CREDITS_TO_INPAINT_IMAGE, 'image_inpaint');
-        console.log('updatedAccount!!!!!!!!!!!!', updatedAccount);
         res.json({
           images: [{ url: imageInfo.publicUrl }],
           newCreditBalance: updatedAccount.creditBalance,

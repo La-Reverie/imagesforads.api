@@ -32,13 +32,10 @@ async function uploadToCDN(imageUrl, req) {
       method: "GET",
       responseType: "stream",
     });
-console.log('########################### 1 ############################################');
+
     const currentUserObj = await getUserById(req.body.currentUserId);
-    console.log('########################### 2 ############################################');
     const account = await getAccountById(req.body.accountId);
-    console.log('########################### 3 ############################################');
     const fileName = getFileName(currentUserObj, extension);
-    console.log('########################### 4 ############################################');
     // Step 2: Upload the image directly to BunnyCDN
     const uploadResponse = await axios.put(
       `${CDN_STORAGE_URL}/${fileName}`,
@@ -52,7 +49,7 @@ console.log('########################### 1 #####################################
         maxBodyLength: Infinity,
       }
     );
-console.log('########################### 5 ############################################');
+
     console.log("▦ 🐇 ------> BunnyCDN response status:", uploadResponse.status);
     console.log("▦ 🐇 ------> BunnyCDN response data:", uploadResponse.data);
 
@@ -75,8 +72,8 @@ console.log('########################### 5 #####################################
       createdAt: Date.now(),
     };
 
-    const result = await saveFileInfo(imageInfo, req);
-    imageInfo._id = result.insertedId;
+    const insertedId = await saveFileInfo(imageInfo, req);
+    imageInfo.imageId = insertedId;
     return imageInfo;
   } catch (error) {
     console.error("Error uploading to BunnyCDN:", error.message);
@@ -92,7 +89,8 @@ function getFileName(currentUserObj, extension) {
 
 async function saveFileInfo(imageInfo) {
   try {
-    return await mongoDb.collection("images").insertOne(imageInfo);
+    const result = await mongoDb.collection('images').insertOne(imageInfo);
+    return result.insertedId;
   } catch (err) {
     console.log("Error saving file info:", err);
   }

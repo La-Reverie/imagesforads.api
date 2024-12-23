@@ -68,7 +68,7 @@ app.post('/api/subscribe', authenticateToken, async (req, res) => {
 app.post('/api/get-images', authenticateToken, async (req, res) => {
   try {
     const accountId = req.body.accountId;
-    const images = await mongoDb.collection('images').find({ accountId: accountId }).toArray();
+    const images = await mongoDb.collection('images').find({ accountId: new ObjectId(accountId) }).toArray();
     res.send({ success: true, images });
   } catch (error) {
     console.error('Error fetching images:', error);
