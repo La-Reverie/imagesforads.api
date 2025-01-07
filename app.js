@@ -24,7 +24,16 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
-app.use(cors());
+
+// Middleware
+app.use(cors({
+  origin: 'https://4ads.ai', // Allow requests from your frontend domain
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+  credentials: true // Allow cookies or credentials
+}));
+
+app.use(express.json());
 app.use(bodyParser.json());
 
 app.use('/authenticate', authenticateRouter);
