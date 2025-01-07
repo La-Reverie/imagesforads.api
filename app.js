@@ -1,7 +1,6 @@
 import express from 'express';
 import 'dotenv/config'
 import bodyParser from 'body-parser';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import generateRouter from './routes/generate.js';
 import authenticateRouter from './routes/authenticate.js';
@@ -24,7 +23,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true
 }));
-app.use(cors());
+
 app.use(bodyParser.json());
 
 app.use('/authenticate', authenticateRouter);
