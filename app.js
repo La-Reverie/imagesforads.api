@@ -27,13 +27,13 @@ app.use(bodyParser.urlencoded({
 app.use(cors());
 app.use(bodyParser.json());
 
-app.use('/api/authenticate', authenticateRouter);
-app.use('/api/generate', generateRouter);
-app.use('/api/track', trackRouter);
-app.use('/api/payments', paymentsRouter);
-app.use('/api/feedback', feedbackRouter);
+app.use('/authenticate', authenticateRouter);
+app.use('/generate', generateRouter);
+app.use('/track', trackRouter);
+app.use('/payments', paymentsRouter);
+app.use('/feedback', feedbackRouter);
 
-app.post('/api/subscribe', authenticateToken, async (req, res) => {
+app.post('/subscribe', authenticateToken, async (req, res) => {
   const userId = new ObjectId(req.body.currentUserId);
   const broadcastId = req.body.broadcastId;
 
@@ -65,7 +65,7 @@ app.post('/api/subscribe', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/get-images', authenticateToken, async (req, res) => {
+app.post('/get-images', authenticateToken, async (req, res) => {
   try {
     const accountId = req.body.accountId;
     const images = await mongoDb.collection('images').find({ accountId: new ObjectId(accountId) }).toArray();
@@ -76,7 +76,7 @@ app.post('/api/get-images', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/getCreditBalance', authenticateToken, async (req, res) => {
+app.post('/getCreditBalance', authenticateToken, async (req, res) => {
   try {
     const accountId = req.body.accountId;
     const account = await getAccountById(accountId);
@@ -87,7 +87,7 @@ app.post('/api/getCreditBalance', authenticateToken, async (req, res) => {
   }
 });
 
-app.get("/api/proxy-image", authenticateToken, async (req, res) => {
+app.get("/proxy-image", authenticateToken, async (req, res) => {
   const { url } = req.query;
   const referrerUrl = process.env.NODE_ENV === 'DEV'
     ? 'http://localhost:3001'
